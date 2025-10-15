@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Material Price Calculator</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #f9f9f9; padding: 20px; }
+  h2 { text-align: center; }
+  input, button { width: 100%; padding: 10px; margin: 8px 0; font-size: 16px; }
+  #orders { margin-top: 15px; }
+  #orders table { width: 100%; border-collapse: collapse; }
+  #orders th, #orders td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  #result { margin-top: 15px; font-weight: bold; font-size: 20px; color: #007700; }
+  #error { color: red; font-weight: bold; margin-top: 5px; }
+</style>
+</head>
+<body>
+
+<h2>Material Price Calculator</h2>
+
+<label>Item name:</label>
+<input id="itemInput" placeholder="e.g. BX2/12">
+
+<label>Quantity:</label>
+<input id="qtyInput" type="number" value="1" min="1">
+
+<button onclick="addItem()">Add Item</button>
+<button onclick="clearOrders()">Clear Orders</button>
+
+<div id="error"></div>
+
+<div id="orders">
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Quantity</th>
+        <th>Price</th>
+        <th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody id="ordersBody"></tbody>
+  </table>
+</div>
+
+<div id="result"></div>
+
+<script>
+const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk";
+const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8"; // 👈 твой ключ
+const SHEET_NAMES = [
+  "Wire",
+  "Box's/covers",
+  "Connectors/Straps",
+  "Recepticals/Switches/Plugs",
+  "Conduit",
+  "Breakers"
+];
+
+let orders = [];
+let sheetDataCache = {};
+
+// Загружаем данные с листа через Google Sheets API
+async function loadSheetData(sheetName) {
+  if(sheetDataCache[sheetName]) return sheetDataCache[sheetName];
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("Failed to fetch sheet: " + sheetName);
+  const data = await res.json();
+  const rows = (data.values || []).map(r => [r[0], r[1]]);
+  sheetDataCache[sheetName] = rows;
+  return rows;
+}
+
+// Загружаем все листы
+async function loadAllSheets() {
+  for (let name of SHEET_NAMES) {
+    await loadSheetData(name);
+  }
+}
+
+// Добавляем товар
+async function addItem() {
+  const item = document.getElementById("itemInput").value.trim();
+  const qty = parseFloat(document.getElementById("qtyInput").value);
+  const errorDiv = document.getElementById("error");
+
+  errorDiv.textContent = "";
+
+  if(!item || qty <= 0) {
+    errorDiv.textContent = "Please enter a valid item name and quantity > 0.";
+    return;
+  }
+
+  await loadAllSheets();
+
+  // Ищем товар во всех листах
+  let found = null;
+  for (let sheet of SHEET_NAMES) {
+    const sheetData = sheetDataCache[sheet];
+    found = sheetData.find(row => row[0] && row[0].toString().toLowerCase() === item.toLowerCase());
+    if(found) break;
+  }
+
+  if(!found) {
+    errorDiv.textContent = "Error: incorrect name";
+    return;
+  }
+
+  const price = parseFloat(found[1]) || 0;
+  const subtotal = price * qty;
+  orders.push({item, qty, price, subtotal});
+
+  renderOrders();
+
+  document.getElementById("itemInput").value = "";
+  document.getElementById("qtyInput").value = 1;
+}
+
+// Отображаем заказы
+function renderOrders() {
+  const ordersBody = document.getElementById("ordersBody");
+  ordersBody.innerHTML = "";
+  let total = 0;
+  orders.forEach(o => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${o.item}</td><td>${o.qty}</td><td>${o.price}</td><td>${o.subtotal}</td>`;
+    ordersBody.appendChild(tr);
+    total += o.subtotal;
+  });
+  document.getElementById("result").textContent = `Total: $${total.toFixed(2)}`;
+}
+
+// Очистка всех заказов
+function clearOrders() {
+  orders = [];
+  renderOrders();
+  document.getElementById("error").textContent = "";
+}
+
+loadAllSheets();
+</script>
+
+</body>
+</html>
