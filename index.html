@@ -12,14 +12,19 @@ input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 #result{margin-top:15px;font-weight:bold;font-size:20px;color:#007700;}
 #error{color:red;font-weight:bold;margin-top:5px;}
 #generatedOutput{background:#eee;padding:10px;white-space:pre-wrap;}
-#copyBtn{margin-top:10px;display:none;} /* скрыт по умолчанию */
+#copyBtn{margin-top:10px;display:none;} 
+.editBtn{font-size:14px;padding:6px 10px;background:#0077cc;color:white;
+  border-radius:6px;text-decoration:none;margin-left:10px;display:flex;align-items:center;gap:5px;}
 </style>
 </head>
 <body>
 
-<h2>Material Price Calculator</h2>
+<h2 style="display:flex;justify-content:space-between;align-items:center;">
+  Material Price Calculator
+  <a href="https://docs.google.com/spreadsheets/d/1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk/edit?usp=sharing" 
+     target="_blank" class="editBtn">✏ Edit</a>
+</h2>
 
-<!-- Unit switch applies only for Wire and Conduit -->
 <label>Units (only for Wire & Conduit):</label>
 <select id="unitSelect">
   <option value="meter">Meters</option>
@@ -71,10 +76,8 @@ const SHEET_NAMES = [
 let sheetDataCache = {};
 let orders = [];
 
-// Conversion constant
 const METER_TO_FOOT = 3.28084;
 
-// Normalize string
 function normalize(str){
   return str
     .replace(/\s+/g,'')
@@ -83,7 +86,6 @@ function normalize(str){
     .toLowerCase();
 }
 
-// Load data
 async function loadSheet(sheetName){
   if(sheetDataCache[sheetName]) return sheetDataCache[sheetName];
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
@@ -102,7 +104,6 @@ async function loadAllSheets(){
 }
 loadAllSheets();
 
-// Add item
 async function addItem(){
   const item = document.getElementById("itemInput").value.trim();
   const qty = parseFloat(document.getElementById("qtyInput").value);
@@ -142,21 +143,47 @@ async function addItem(){
   document.getElementById("qtyInput").value=1;
 }
 
-// Render
 function renderOrders(){
   const tbody = document.getElementById("ordersBody");
   tbody.innerHTML="";
   let total=0;
-  orders.forEach(o=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${o.item}</td><td>${o.qty}</td><td>$${o.price}</td><td>$${o.subtotal}</td>`;
-    tbody.appendChild(tr);
+  orders.forEach((o, index)=>{
     total += parseFloat(o.subtotal);
+    const tr=document.createElement("tr");
+
+    // Price cell editable
+    const priceCell = document.createElement("td");
+    priceCell.textContent = `$${o.price}`;
+    priceCell.style.cursor = "pointer";
+    priceCell.onclick = function(){
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.01";
+      input.value = o.price;
+      input.style.width="80px";
+      priceCell.textContent="";
+      priceCell.appendChild(input);
+      input.focus();
+      input.onblur = input.onchange = () => {
+        const newPrice = parseFloat(input.value);
+        if(!isNaN(newPrice) && newPrice>0){
+          o.price = newPrice.toFixed(2);
+          o.subtotal = (newPrice * o.qty).toFixed(2);
+          renderOrders();
+        } else {
+          renderOrders();
+        }
+      };
+    };
+
+    tr.innerHTML=`<td>${o.item}</td><td>${o.qty}</td>`;
+    tr.appendChild(priceCell);
+    tr.innerHTML += `<td>$${o.subtotal}</td>`;
+    tbody.appendChild(tr);
   });
   document.getElementById("result").textContent=`Total: $${total.toFixed(2)}`;
 }
 
-// Clear
 function clearOrders(){ 
   orders=[]; 
   renderOrders(); 
@@ -165,7 +192,6 @@ function clearOrders(){
   document.getElementById("copyBtn").style.display="none";
 }
 
-// Generate formatted list
 function generateList(){
   let output = "";
   const unit = document.getElementById("unitSelect").value;
@@ -179,13 +205,12 @@ function generateList(){
     output += `${o.qty}${unitSuffix} - ${o.item}\n`;
   });
   if(orders.length>0){
-    output += `\nCoast of above material ${total.toFixed(2)}$`;
+    output += `\nCost of above material ${total.toFixed(2)}$`;
   }
   document.getElementById("generatedOutput").textContent = output || "No items";
   document.getElementById("copyBtn").style.display = (orders.length>0 ? "inline-block" : "none");
 }
 
-// Copy to clipboard
 function copyText(){
   const text = document.getElementById("generatedOutput").textContent;
   navigator.clipboard.writeText(text).then(()=>{
@@ -193,7 +218,6 @@ function copyText(){
   });
 }
 
-// Autocomplete
 function updateSuggestions(){
   const input = document.getElementById("itemInput").value.toLowerCase();
   const datalist = document.getElementById("suggestions");
