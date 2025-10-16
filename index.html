@@ -1,3 +1,25 @@
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<link rel="stylesheet" href="https://identity.netlify.com/v1/netlify-identity-widget.css" />
+<button id="login-button">Login</button>
+
+<script>
+if (window.netlifyIdentity) {
+  window.netlifyIdentity.init();
+  document.getElementById('login-button').onclick = () => {
+    window.netlifyIdentity.open();
+  }
+}
+</script>
+netlifyIdentity.on('login', user => {
+  console.log("Logged in user:", user);
+  // Можно показать страницу калькулятора только авторизованным
+  document.getElementById('calculator').style.display = 'block';
+});
+<div id="calculator" style="display:none">
+  <!-- Тут твой калькулятор -->
+</div>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -145,3 +167,4 @@ loadAllSheets();
 
 </body>
 </html>
+
