@@ -9,10 +9,11 @@ body{font-family:system-ui,sans-serif;padding:20px;background:#f9f9f9;}
 input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 #orders table{width:100%;border-collapse:collapse;}
 #orders th,#orders td{border:1px solid #ccc;padding:8px;text-align:center;}
+#orders td input{padding:6px 8px;font-size:14px;width:100px;}
 #result{margin-top:15px;font-weight:bold;font-size:20px;color:#007700;}
 #error{color:red;font-weight:bold;margin-top:5px;}
 #generatedOutput{background:#eee;padding:10px;white-space:pre-wrap;}
-#copyBtn{margin-top:10px;display:none;} 
+#copyBtn{margin-top:10px;display:none;} /* hidden until generate */
 .editBtn{font-size:14px;padding:6px 10px;background:#0077cc;color:white;
   border-radius:6px;text-decoration:none;margin-left:10px;display:flex;align-items:center;gap:5px;}
 </style>
@@ -25,6 +26,7 @@ input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
      target="_blank" class="editBtn">✏ Edit</a>
 </h2>
 
+<!-- Unit switch applies only for Wire and Conduit -->
 <label>Units (only for Wire & Conduit):</label>
 <select id="unitSelect">
   <option value="meter">Meters</option>
@@ -74,36 +76,44 @@ const SHEET_NAMES = [
 ];
 
 let sheetDataCache = {};
-let orders = [];
+let orders = []; // { item, qty (number), price (number), subtotal (number), category }
 
+// Conversion constant
 const METER_TO_FOOT = 3.28084;
 
+// Normalize string: remove spaces, lowercase, reorder BX/Romex patterns
 function normalize(str){
   return str
-    .replace(/\s+/g,'')
-    .replace(/(.*)(bx)/i,'bx$1')
-    .replace(/(.*)(romex)/i,'romex$1')
+    .replace(/\s+/g,'')             // remove spaces
+    .replace(/(.*)(bx)$/i,'bx$1')   // put BX in front if at the end
+    .replace(/(.*)(romex)$/i,'romex$1') // put Romex in front if at the end
     .toLowerCase();
 }
 
+// Load data from one sheet
 async function loadSheet(sheetName){
   if(sheetDataCache[sheetName]) return sheetDataCache[sheetName];
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
+
+  // Take item name from column 1, price from column 3 (allow "3,67" or "3.67")
   const rows = (data.values||[]).map(r => ({
     item: r[0],
     price: r[2] ? parseFloat(r[2].toString().replace(',', '.')) : 0
   }));
+
   sheetDataCache[sheetName] = rows;
   return rows;
 }
 
+// Preload all sheets
 async function loadAllSheets(){
   for(const name of SHEET_NAMES) await loadSheet(name);
 }
 loadAllSheets();
 
+// Add item to order
 async function addItem(){
   const item = document.getElementById("itemInput").value.trim();
   const qty = parseFloat(document.getElementById("qtyInput").value);
@@ -131,59 +141,84 @@ async function addItem(){
   }
 
   let price = found.price;
+  // Apply unit conversion if Wire or Conduit (sheet prices are per meter)
   if(sheetNameFound==="Wire" || sheetNameFound==="Conduit"){
     if(unit==="foot") price = price / METER_TO_FOOT;
   }
 
-  const subtotal = (price * qty).toFixed(2);
-  orders.push({item, qty, price: price.toFixed(2), subtotal, category: sheetNameFound});
+  const subtotal = +(price * qty).toFixed(2);
+  orders.push({item, qty, price: +price.toFixed(2), subtotal, category: sheetNameFound});
   renderOrders();
 
   document.getElementById("itemInput").value="";
   document.getElementById("qtyInput").value=1;
 }
 
+// Render orders in table (no innerHTML mutations after attaching listeners)
 function renderOrders(){
   const tbody = document.getElementById("ordersBody");
   tbody.innerHTML="";
   let total=0;
+
   orders.forEach((o, index)=>{
-    total += parseFloat(o.subtotal);
-    const tr=document.createElement("tr");
+    total += o.subtotal;
 
-    // Price cell editable
-    const priceCell = document.createElement("td");
-    priceCell.textContent = `$${o.price}`;
-    priceCell.style.cursor = "pointer";
-    priceCell.onclick = function(){
-      const input = document.createElement("input");
-      input.type = "number";
-      input.step = "0.01";
-      input.value = o.price;
-      input.style.width="80px";
-      priceCell.textContent="";
-      priceCell.appendChild(input);
-      input.focus();
-      input.onblur = input.onchange = () => {
-        const newPrice = parseFloat(input.value);
-        if(!isNaN(newPrice) && newPrice>0){
-          o.price = newPrice.toFixed(2);
-          o.subtotal = (newPrice * o.qty).toFixed(2);
-          renderOrders();
-        } else {
-          renderOrders();
-        }
-      };
-    };
+    const tr = document.createElement("tr");
 
-    tr.innerHTML=`<td>${o.item}</td><td>${o.qty}</td>`;
-    tr.appendChild(priceCell);
-    tr.innerHTML += `<td>$${o.subtotal}</td>`;
+    const tdItem = document.createElement("td");
+    tdItem.textContent = o.item;
+
+    const tdQty = document.createElement("td");
+    tdQty.textContent = o.qty;
+
+    const tdPrice = document.createElement("td");
+    tdPrice.textContent = `$${o.price.toFixed(2)}`;
+    tdPrice.style.cursor = "pointer";
+    tdPrice.title = "Click to edit price for this row";
+    tdPrice.addEventListener("click", () => makePriceEditable(tdPrice, index));
+
+    const tdSubtotal = document.createElement("td");
+    tdSubtotal.textContent = `$${o.subtotal.toFixed(2)}`;
+
+    tr.append(tdItem, tdQty, tdPrice, tdSubtotal);
     tbody.appendChild(tr);
   });
+
   document.getElementById("result").textContent=`Total: $${total.toFixed(2)}`;
 }
 
+// Turn price cell into an input, commit on blur/Enter, cancel on Esc
+function makePriceEditable(cell, idx){
+  const current = Number(orders[idx].price);
+  const input = document.createElement("input");
+  input.type = "number";
+  input.step = "0.01";
+  input.min = "0";
+  input.value = current.toFixed(2);
+  input.style.width = "100px";
+
+  cell.textContent = "";
+  cell.appendChild(input);
+  input.focus();
+  input.select();
+
+  const commit = () => {
+    const val = parseFloat(input.value);
+    if(!isNaN(val) && val > 0){
+      orders[idx].price = +val.toFixed(2);
+      orders[idx].subtotal = +(orders[idx].price * orders[idx].qty).toFixed(2);
+    }
+    renderOrders();
+  };
+
+  input.addEventListener("blur", commit);
+  input.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){ e.preventDefault(); input.blur(); }
+    if(e.key === "Escape"){ e.preventDefault(); renderOrders(); }
+  });
+}
+
+// Clear all orders
 function clearOrders(){ 
   orders=[]; 
   renderOrders(); 
@@ -192,6 +227,7 @@ function clearOrders(){
   document.getElementById("copyBtn").style.display="none";
 }
 
+// Generate formatted list + total line
 function generateList(){
   let output = "";
   const unit = document.getElementById("unitSelect").value;
@@ -201,7 +237,7 @@ function generateList(){
     if(o.category==="Wire" || o.category==="Conduit"){
       unitSuffix = (unit==="meter" ? "m" : "ft");
     }
-    total += parseFloat(o.subtotal);
+    total += o.subtotal;
     output += `${o.qty}${unitSuffix} - ${o.item}\n`;
   });
   if(orders.length>0){
@@ -211,6 +247,7 @@ function generateList(){
   document.getElementById("copyBtn").style.display = (orders.length>0 ? "inline-block" : "none");
 }
 
+// Copy to clipboard
 function copyText(){
   const text = document.getElementById("generatedOutput").textContent;
   navigator.clipboard.writeText(text).then(()=>{
@@ -218,12 +255,14 @@ function copyText(){
   });
 }
 
+// Update autocomplete suggestions
 function updateSuggestions(){
   const input = document.getElementById("itemInput").value.toLowerCase();
   const datalist = document.getElementById("suggestions");
   datalist.innerHTML = "";
   if(input.length<2) return;
-  let matches = [];
+
+  const matches = [];
   for(const sheet of SHEET_NAMES){
     const rows = sheetDataCache[sheet] || [];
     rows.forEach(r=>{
@@ -232,6 +271,7 @@ function updateSuggestions(){
       }
     });
   }
+
   matches.forEach(m=>{
     const option=document.createElement("option");
     option.value=m;
