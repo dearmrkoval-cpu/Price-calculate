@@ -17,6 +17,7 @@ input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 
 <h2>Material Price Calculator</h2>
 
+<!-- Unit switch applies only for Wire and Conduit -->
 <label>Units (only for Wire & Conduit):</label>
 <select id="unitSelect">
   <option value="meter">Meters</option>
@@ -24,7 +25,9 @@ input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 </select>
 
 <label>Item name:</label>
-<input id="itemInput" placeholder="e.g. BX2/12">
+<!-- Input with autocomplete -->
+<input id="itemInput" list="suggestions" placeholder="e.g. BX2/12">
+<datalist id="suggestions"></datalist>
 
 <label>Quantity:</label>
 <input id="qtyInput" type="number" value="1" min="1">
@@ -46,8 +49,9 @@ input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 <div id="result"></div>
 
 <script>
-const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk"; // твой Google Sheet ID
-const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8"; // твой API Key
+// Google Sheets configuration
+const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk"; // your Google Sheet ID
+const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8"; // your API Key
 const SHEET_NAMES = [
   "Wire",
   "Box's/covers",
@@ -61,19 +65,26 @@ const SHEET_NAMES = [
 let sheetDataCache = {};
 let orders = [];
 
-// коэффициент пересчёта
+// Conversion constant
 const METER_TO_FOOT = 3.28084;
 
-// нормализация строки (без пробелов, нижний регистр)
-function normalize(str){ return str.replace(/\s+/g,'').toLowerCase(); }
+// Normalize string: remove spaces, lowercase, reorder BX/Romex patterns
+function normalize(str){
+  return str
+    .replace(/\s+/g,'')             // remove spaces
+    .replace(/(.*)(bx)/i,'bx$1')    // put BX in front if at the end
+    .replace(/(.*)(romex)/i,'romex$1') // put Romex in front if at the end
+    .toLowerCase();
+}
 
-// загрузка данных с листа
+// Load data from one sheet
 async function loadSheet(sheetName){
   if(sheetDataCache[sheetName]) return sheetDataCache[sheetName];
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
 
+  // Take item name from column 1, price from column 3
   const rows = (data.values||[]).map(r => ({
     item: r[0],
     price: r[2] ? parseFloat(r[2].toString().replace(',', '.')) : 0
@@ -83,13 +94,13 @@ async function loadSheet(sheetName){
   return rows;
 }
 
-// загружаем все листы заранее
+// Preload all sheets
 async function loadAllSheets(){
   for(const name of SHEET_NAMES) await loadSheet(name);
 }
 loadAllSheets();
 
-// добавление товара
+// Add item to order
 async function addItem(){
   const item = document.getElementById("itemInput").value.trim();
   const qty = parseFloat(document.getElementById("qtyInput").value);
@@ -97,7 +108,10 @@ async function addItem(){
   const errorDiv = document.getElementById("error");
   errorDiv.textContent = "";
 
-  if(!item || qty<=0){ errorDiv.textContent="Enter valid item and quantity >0"; return; }
+  if(!item || qty<=0){ 
+    errorDiv.textContent="Enter valid item and quantity >0"; 
+    return; 
+  }
 
   await loadAllSheets();
 
@@ -108,11 +122,14 @@ async function addItem(){
     if(found){ sheetNameFound = sheet; break; }
   }
 
-  if(!found){ errorDiv.textContent="Error: incorrect name"; return; }
+  if(!found){ 
+    errorDiv.textContent="Error: incorrect name"; 
+    return; 
+  }
 
   let price = found.price;
 
-  // Если Wire или Conduit → учитываем выбранную единицу
+  // Apply unit conversion if Wire or Conduit
   if(sheetNameFound==="Wire" || sheetNameFound==="Conduit"){
     if(unit==="foot") price = price / METER_TO_FOOT;
   }
@@ -125,6 +142,7 @@ async function addItem(){
   document.getElementById("qtyInput").value=1;
 }
 
+// Render orders in table
 function renderOrders(){
   const tbody = document.getElementById("ordersBody");
   tbody.innerHTML="";
@@ -138,11 +156,40 @@ function renderOrders(){
   document.getElementById("result").textContent=`Total: $${total.toFixed(2)}`;
 }
 
+// Clear all orders
 function clearOrders(){ 
   orders=[]; 
   renderOrders(); 
   document.getElementById("error").textContent=""; 
 }
+
+// Update autocomplete suggestions
+function updateSuggestions(){
+  const input = document.getElementById("itemInput").value.toLowerCase();
+  const datalist = document.getElementById("suggestions");
+  datalist.innerHTML = "";
+
+  if(input.length<2) return; // show suggestions only after 2 characters
+
+  let matches = [];
+  for(const sheet of SHEET_NAMES){
+    const rows = sheetDataCache[sheet] || [];
+    rows.forEach(r=>{
+      if(r.item && r.item.toLowerCase().includes(input)){
+        if(!matches.includes(r.item)) matches.push(r.item);
+      }
+    });
+  }
+
+  matches.forEach(m=>{
+    const option=document.createElement("option");
+    option.value=m;
+    datalist.appendChild(option);
+  });
+}
+
+// Event listener for autocomplete
+document.getElementById("itemInput").addEventListener("input", updateSuggestions);
 </script>
 
 </body>
