@@ -1,56 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Material Price Calculator</title>
-<style>
-body{font-family:system-ui,sans-serif;padding:20px;background:#f9f9f9;}
-input,button{width:100%;padding:10px;margin:8px 0;font-size:16px;}
-#orders table{width:100%;border-collapse:collapse;}
-#orders th,#orders td{border:1px solid #ccc;padding:8px;text-align:center;}
-#result{margin-top:15px;font-weight:bold;font-size:20px;color:#007700;}
-#error{color:red;font-weight:bold;margin-top:5px;}
-</style>
-</head>
-<body>
-
-<h2>Material Price Calculator</h2>
-
-<label>Item name:</label>
-<input id="itemInput" placeholder="e.g. BX2/12">
-
-<label>Quantity:</label>
-<input id="qtyInput" type="number" value="1" min="1">
-
-<button onclick="addItem()">Add Item</button>
-<button onclick="clearOrders()">Clear Orders</button>
-
-<div id="error"></div>
-
-<div id="orders">
-  <table>
-    <thead>
-      <tr><th>Item</th><th>Quantity</th><th>Price</th><th>Subtotal</th></tr>
-    </thead>
-    <tbody id="ordersBody"></tbody>
-  </table>
-</div>
-
-<div id="result"></div>
-
 <script>
-const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk"; // твой Google Sheet ID
-const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8"; // твой API Key
+const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk";
+const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8";
 const SHEET_NAMES = ["Wire","Box's/covers","Connectors/Straps","Recepticals/Switches/Plugs","Conduit","Breakers"];
 
 let sheetDataCache = {};
 let orders = [];
 
-// нормализация строки (без пробелов, нижний регистр)
 function normalize(str){ return str.replace(/\s+/g,'').toLowerCase(); }
 
-// подгрузка данных с листа
 async function loadSheet(sheetName){
   if(sheetDataCache[sheetName]) return sheetDataCache[sheetName];
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
@@ -61,11 +18,24 @@ async function loadSheet(sheetName){
   return rows;
 }
 
-// подгружаем все листы заранее
 async function loadAllSheets(){
   for(const name of SHEET_NAMES) await loadSheet(name);
 }
 loadAllSheets();
+
+async function getLivePrice(itemName){
+  // Replace this URL with your own backend endpoint later
+  const apiUrl = `https://your-server.com/getPrice?item=${encodeURIComponent(itemName)}`;
+  try {
+    const res = await fetch(apiUrl);
+    if(!res.ok) throw new Error("Server error");
+    const data = await res.json();
+    return data.price;
+  } catch(e){
+    console.error("Live price fetch failed:", e);
+    return null;
+  }
+}
 
 async function addItem(){
   const item = document.getElementById("itemInput").value.trim();
@@ -75,7 +45,6 @@ async function addItem(){
 
   if(!item || qty<=0){ errorDiv.textContent="Enter valid item and quantity >0"; return; }
 
-  // ищем товар во всех листах
   await loadAllSheets();
   let found = null;
   for(const sheet of SHEET_NAMES){
@@ -84,10 +53,17 @@ async function addItem(){
     if(found) break;
   }
 
-  if(!found){ errorDiv.textContent="Error: incorrect name"; return; }
+  // Try getting live price if not found in Sheets
+  let price = found ? found.price : null;
+  if(!price){
+    const live = await getLivePrice(item);
+    if(live) price = live;
+  }
 
-  const subtotal = found.price*qty;
-  orders.push({item, qty, price: found.price, subtotal});
+  if(!price){ errorDiv.textContent="Error: item not found"; return; }
+
+  const subtotal = price*qty;
+  orders.push({item, qty, price, subtotal});
   renderOrders();
   document.getElementById("itemInput").value="";
   document.getElementById("qtyInput").value=1;
@@ -109,5 +85,3 @@ function renderOrders(){
 function clearOrders(){ orders=[]; renderOrders(); document.getElementById("error").textContent=""; }
 </script>
 
-</body>
-</html>
