@@ -56,8 +56,13 @@ async function loadSheet(sheetName){
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
-  // берем цену из колонки 3 (индекс 2)
-  const rows = (data.values||[]).map(r => ({item:r[0], price: parseFloat(r[2] || 0)}));
+
+  // Берем цену из колонки 3 (индекс 2) и округляем до 2 знаков
+  const rows = (data.values||[]).map(r => ({
+    item: r[0],
+    price: r[2] ? parseFloat(r[2].toString().replace(',', '.')).toFixed(2) : "0.00"
+  }));
+
   sheetDataCache[sheetName] = rows;
   return rows;
 }
@@ -87,8 +92,11 @@ async function addItem(){
 
   if(!found){ errorDiv.textContent="Error: incorrect name"; return; }
 
-  const subtotal = found.price*qty;
-  orders.push({item, qty, price: found.price, subtotal});
+  // делаем subtotal с 2 знаками после запятой
+  const price = parseFloat(found.price);
+  const subtotal = (price * qty).toFixed(2);
+
+  orders.push({item, qty, price: price.toFixed(2), subtotal});
   renderOrders();
   document.getElementById("itemInput").value="";
   document.getElementById("qtyInput").value=1;
@@ -100,10 +108,9 @@ function renderOrders(){
   let total=0;
   orders.forEach(o=>{
     const tr=document.createElement("tr");
-    // показываем цену и subtotal с 2 знаками после запятой
-    tr.innerHTML=`<td>${o.item}</td><td>${o.qty}</td><td>${o.price.toFixed(2)}</td><td>${o.subtotal.toFixed(2)}</td>`;
+    tr.innerHTML=`<td>${o.item}</td><td>${o.qty}</td><td>${o.price}</td><td>${o.subtotal}</td>`;
     tbody.appendChild(tr);
-    total+=o.subtotal;
+    total += parseFloat(o.subtotal);
   });
   document.getElementById("result").textContent=`Total: $${total.toFixed(2)}`;
 }
