@@ -1,0 +1,13 @@
+{
+  "Wire": [
+    {"item": "BX2/12", "price": 10},
+    {"item": "L-16", "price": 2}
+  ],
+  "Box's/covers": [
+    {"item": "Box Small", "price": 5}
+  ],
+  "Connectors/Straps": [],
+  "Recepticals/Switches/Plugs": [],
+  "Conduit": [],
+  "Breakers": []
+}
