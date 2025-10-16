@@ -48,7 +48,7 @@
 
 <script>
 const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk";
-const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8"; // 👈 твой ключ
+const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8";
 const SHEET_NAMES = [
   "Wire",
   "Box's/covers",
@@ -60,6 +60,11 @@ const SHEET_NAMES = [
 
 let orders = [];
 let sheetDataCache = {};
+
+// Функция для нормализации строк: убираем пробелы и делаем нижний регистр
+function normalize(str) {
+  return str.replace(/\s+/g, '').toLowerCase();
+}
 
 // Загружаем данные с листа через Google Sheets API
 async function loadSheetData(sheetName) {
@@ -96,11 +101,11 @@ async function addItem() {
 
   await loadAllSheets();
 
-  // Ищем товар во всех листах
+  // Ищем товар во всех листах, игнорируя пробелы и регистр
   let found = null;
   for (let sheet of SHEET_NAMES) {
     const sheetData = sheetDataCache[sheet];
-    found = sheetData.find(row => row[0] && row[0].toString().toLowerCase() === item.toLowerCase());
+    found = sheetData.find(row => row[0] && normalize(row[0].toString()) === normalize(item));
     if(found) break;
   }
 
@@ -145,5 +150,3 @@ loadAllSheets();
 
 </body>
 </html>
-
-
