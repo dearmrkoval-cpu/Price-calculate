@@ -1,113 +1,76 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Material Price Calculator</title>
 <style>
-body{font-family:system-ui,sans-serif;padding:20px;background:#f9f9f9;}
-input,button{width:100%;padding:10px;margin:8px 0;font-size:16px;}
-#orders table{width:100%;border-collapse:collapse;}
-#orders th,#orders td{border:1px solid #ccc;padding:8px;text-align:center;}
-#result{margin-top:15px;font-weight:bold;font-size:20px;color:#007700;}
-#error{color:red;font-weight:bold;margin-top:5px;}
+body{font-family:system-ui,sans-serif;padding:20px;background:#fafafa;}
+input,button,select{padding:8px;margin:5px;}
+#result{margin-top:10px;font-size:18px;font-weight:bold;}
 </style>
 </head>
 <body>
 
 <h2>Material Price Calculator</h2>
 
-<label>Item name:</label>
-<input id="itemInput" placeholder="e.g. BX2/12">
+<label>Category:</label>
+<select id="sheetSelect"></select><br>
+
+<label>Item:</label>
+<input id="itemInput" placeholder="e.g. BX2/12"><br>
 
 <label>Quantity:</label>
-<input id="qtyInput" type="number" value="1" min="1">
+<input id="qtyInput" type="number" value="1" min="1"><br>
 
 <button onclick="addItem()">Add Item</button>
-<button onclick="clearOrders()">Clear Orders</button>
+<button onclick="clearList()">Clear</button>
 
-<div id="error"></div>
-
-<div id="orders">
-  <table>
-    <thead>
-      <tr><th>Item</th><th>Quantity</th><th>Price</th><th>Subtotal</th></tr>
-    </thead>
-    <tbody id="ordersBody"></tbody>
-  </table>
-</div>
+<table border="1" cellpadding="5" id="list" style="margin-top:10px;">
+<thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
+<tbody></tbody>
+</table>
 
 <div id="result"></div>
 
 <script>
-const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk"; // твой Google Sheet ID
-const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8"; // твой API Key
-const SHEET_NAMES = ["Wire","Box's/covers","Connectors/Straps","Recepticals/Switches/Plugs","Conduit","Breakers"];
+const SHEETS_API = "YOUR_WEB_APP_URL"; // your deployed Apps Script URL
+let data = {};
+let items = [];
+const normalize = s => s.replace(/\s+/g,'').toLowerCase();
 
-let sheetDataCache = {};
-let orders = [];
-
-// нормализация строки (без пробелов, нижний регистр)
-function normalize(str){ return str.replace(/\s+/g,'').toLowerCase(); }
-
-// подгрузка данных с листа
-async function loadSheet(sheetName){
-  if(sheetDataCache[sheetName]) return sheetDataCache[sheetName];
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  const rows = (data.values||[]).map(r => ({item:r[0], price: parseFloat(r[1])}));
-  sheetDataCache[sheetName] = rows;
-  return rows;
+async function fetchData(){
+  const res = await fetch(SHEETS_API);
+  data = await res.json();
+  const select = document.getElementById("sheetSelect");
+  select.innerHTML = Object.keys(data).map(n => `<option>${n}</option>`).join('');
+  console.log("Data refreshed", data);
 }
+setInterval(fetchData, 10000); // auto-refresh every 10s
+fetchData();
 
-// подгружаем все листы заранее
-async function loadAllSheets(){
-  for(const name of SHEET_NAMES) await loadSheet(name);
-}
-loadAllSheets();
-
-async function addItem(){
-  const item = document.getElementById("itemInput").value.trim();
+function addItem(){
+  const sheet = document.getElementById("sheetSelect").value;
+  const name = document.getElementById("itemInput").value.trim();
   const qty = parseFloat(document.getElementById("qtyInput").value);
-  const errorDiv = document.getElementById("error");
-  errorDiv.textContent = "";
-
-  if(!item || qty<=0){ errorDiv.textContent="Enter valid item and quantity >0"; return; }
-
-  // ищем товар во всех листах
-  await loadAllSheets();
-  let found = null;
-  for(const sheet of SHEET_NAMES){
-    const rows = sheetDataCache[sheet];
-    found = rows.find(r => normalize(r.item)===normalize(item));
-    if(found) break;
-  }
-
-  if(!found){ errorDiv.textContent="Error: incorrect name"; return; }
-
-  const subtotal = found.price*qty;
-  orders.push({item, qty, price: found.price, subtotal});
-  renderOrders();
-  document.getElementById("itemInput").value="";
-  document.getElementById("qtyInput").value=1;
+  if(!name || qty<=0) return;
+  const found = data[sheet]?.find(i => normalize(i.item)===normalize(name));
+  if(!found){alert("Item not found!");return;}
+  const price = found.price;
+  const subtotal = (price * qty).toFixed(2);
+  items.push({name, qty, price, subtotal});
+  render();
 }
-
-function renderOrders(){
-  const tbody = document.getElementById("ordersBody");
+function render(){
+  const tbody=document.querySelector("#list tbody");
   tbody.innerHTML="";
   let total=0;
-  orders.forEach(o=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${o.item}</td><td>${o.qty}</td><td>${o.price}</td><td>${o.subtotal}</td>`;
-    tbody.appendChild(tr);
-    total+=o.subtotal;
+  items.forEach(i=>{
+    total+=parseFloat(i.subtotal);
+    tbody.innerHTML+=`<tr><td>${i.name}</td><td>${i.qty}</td><td>$${i.price.toFixed(2)}</td><td>$${i.subtotal}</td></tr>`;
   });
-  document.getElementById("result").textContent=`Total: $${total.toFixed(2)}`;
+  document.getElementById("result").innerText=`Total: $${total.toFixed(2)}`;
 }
-
-function clearOrders(){ orders=[]; renderOrders(); document.getElementById("error").textContent=""; }
+function clearList(){items=[];render();}
 </script>
 
 </body>
