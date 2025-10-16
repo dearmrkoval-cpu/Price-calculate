@@ -5,14 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Material Price Calculator</title>
 <style>
-  body { font-family: system-ui, sans-serif; background: #f9f9f9; padding: 20px; }
-  h2 { text-align: center; }
-  input, button { width: 100%; padding: 10px; margin: 8px 0; font-size: 16px; }
-  #orders { margin-top: 15px; }
-  #orders table { width: 100%; border-collapse: collapse; }
-  #orders th, #orders td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-  #result { margin-top: 15px; font-weight: bold; font-size: 20px; color: #007700; }
-  #error { color: red; font-weight: bold; margin-top: 5px; }
+body{font-family:system-ui,sans-serif;padding:20px;background:#f9f9f9;}
+h2{text-align:center;}
+input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
+#orders table{width:100%;border-collapse:collapse;margin-top:10px;}
+#orders th,#orders td{border:1px solid #ccc;padding:8px;text-align:center;}
+#error{color:red;font-weight:bold;margin-top:5px;}
+#result{margin-top:15px;font-weight:bold;font-size:20px;color:#007700;}
 </style>
 </head>
 <body>
@@ -34,10 +33,7 @@
   <table>
     <thead>
       <tr>
-        <th>Item</th>
-        <th>Quantity</th>
-        <th>Price</th>
-        <th>Subtotal</th>
+        <th>Item</th><th>Quantity</th><th>Price</th><th>Subtotal</th>
       </tr>
     </thead>
     <tbody id="ordersBody"></tbody>
@@ -47,89 +43,22 @@
 <div id="result"></div>
 
 <script>
-const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk";
-const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8";
-const SHEET_NAMES = [
-  "Wire",
-  "Box's/covers",
-  "Connectors/Straps",
-  "Recepticals/Switches/Plugs",
-  "Conduit",
-  "Breakers"
-];
-
 let orders = [];
-let sheetDataCache = {};
+let data = {};
 
-// Функция для нормализации строк: убираем пробелы и делаем нижний регистр
-function normalize(str) {
-  return str.replace(/\s+/g, '').toLowerCase();
+function normalize(str){return str.replace(/\s+/g,'').toLowerCase();}
+
+// Загружаем JSON
+async function loadData(){
+  const res = await fetch('data.json');
+  data = await res.json();
 }
 
-// Загружаем данные с листа через Google Sheets API
-async function loadSheetData(sheetName) {
-  if(sheetDataCache[sheetName]) return sheetDataCache[sheetName];
-
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
-  const res = await fetch(url);
-  if(!res.ok) throw new Error("Failed to fetch sheet: " + sheetName);
-  const data = await res.json();
-  const rows = (data.values || []).map(r => [r[0], r[1]]);
-  sheetDataCache[sheetName] = rows;
-  return rows;
-}
-
-// Загружаем все листы
-async function loadAllSheets() {
-  for (let name of SHEET_NAMES) {
-    await loadSheetData(name);
-  }
-}
-
-// Добавляем товар
-async function addItem() {
-  const item = document.getElementById("itemInput").value.trim();
-  const qty = parseFloat(document.getElementById("qtyInput").value);
-  const errorDiv = document.getElementById("error");
-
-  errorDiv.textContent = "";
-
-  if(!item || qty <= 0) {
-    errorDiv.textContent = "Please enter a valid item name and quantity > 0.";
-    return;
-  }
-
-  await loadAllSheets();
-
-  // Ищем товар во всех листах, игнорируя пробелы и регистр
-  let found = null;
-  for (let sheet of SHEET_NAMES) {
-    const sheetData = sheetDataCache[sheet];
-    found = sheetData.find(row => row[0] && normalize(row[0].toString()) === normalize(item));
-    if(found) break;
-  }
-
-  if(!found) {
-    errorDiv.textContent = "Error: incorrect name";
-    return;
-  }
-
-  const price = parseFloat(found[1]) || 0;
-  const subtotal = price * qty;
-  orders.push({item, qty, price, subtotal});
-
-  renderOrders();
-
-  document.getElementById("itemInput").value = "";
-  document.getElementById("qtyInput").value = 1;
-}
-
-// Отображаем заказы
-function renderOrders() {
+function renderOrders(){
   const ordersBody = document.getElementById("ordersBody");
   ordersBody.innerHTML = "";
   let total = 0;
-  orders.forEach(o => {
+  orders.forEach(o=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${o.item}</td><td>${o.qty}</td><td>${o.price}</td><td>${o.subtotal}</td>`;
     ordersBody.appendChild(tr);
@@ -138,15 +67,38 @@ function renderOrders() {
   document.getElementById("result").textContent = `Total: $${total.toFixed(2)}`;
 }
 
-// Очистка всех заказов
-function clearOrders() {
-  orders = [];
+function clearOrders(){
+  orders=[];
   renderOrders();
-  document.getElementById("error").textContent = "";
+  document.getElementById("error").textContent="";
 }
 
-loadAllSheets();
-</script>
+function addItem(){
+  const item = document.getElementById("itemInput").value.trim();
+  const qty = parseFloat(document.getElementById("qtyInput").value);
+  const errorDiv = document.getElementById("error");
+  errorDiv.textContent="";
 
+  if(!item || qty<=0){errorDiv.textContent="Please enter valid item and quantity"; return;}
+
+  // Поиск во всех категориях
+  let found = null;
+  for(const cat in data){
+    found = data[cat].find(i=>normalize(i.item)===normalize(item));
+    if(found) break;
+  }
+
+  if(!found){errorDiv.textContent="Error: incorrect name"; return;}
+
+  const subtotal = found.price * qty;
+  orders.push({item, qty, price:found.price, subtotal});
+  renderOrders();
+
+  document.getElementById("itemInput").value="";
+  document.getElementById("qtyInput").value=1;
+}
+
+loadData();
+</script>
 </body>
 </html>
