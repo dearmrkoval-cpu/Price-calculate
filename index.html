@@ -6,7 +6,7 @@
 <title>Material Price Calculator</title>
 <style>
 body{font-family:system-ui,sans-serif;padding:20px;background:#f9f9f9;}
-input,button{width:100%;padding:10px;margin:8px 0;font-size:16px;}
+input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 #orders table{width:100%;border-collapse:collapse;}
 #orders th,#orders td{border:1px solid #ccc;padding:8px;text-align:center;}
 #result{margin-top:15px;font-weight:bold;font-size:20px;color:#007700;}
@@ -16,6 +16,12 @@ input,button{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 <body>
 
 <h2>Material Price Calculator</h2>
+
+<label>Units (only for Wire & Conduit):</label>
+<select id="unitSelect">
+  <option value="meter">Meters</option>
+  <option value="foot">Feet</option>
+</select>
 
 <label>Item name:</label>
 <input id="itemInput" placeholder="e.g. BX2/12">
@@ -42,62 +48,79 @@ input,button{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 <script>
 const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk"; // твой Google Sheet ID
 const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8"; // твой API Key
-const SHEET_NAMES = ["Wire","Box's/covers","Connectors/Straps","Recepticals/Switches/Plugs","Conduit","Breakers"];
+const SHEET_NAMES = [
+  "Wire",
+  "Box's/covers",
+  "Connectors/Straps",
+  "Recepticals/Switches/Plugs",
+  "Conduit",
+  "Breakers",
+  "Fuses"
+];
 
 let sheetDataCache = {};
 let orders = [];
 
+// коэффициент пересчёта
+const METER_TO_FOOT = 3.28084;
+
 // нормализация строки (без пробелов, нижний регистр)
 function normalize(str){ return str.replace(/\s+/g,'').toLowerCase(); }
 
-// подгрузка данных с листа
+// загрузка данных с листа
 async function loadSheet(sheetName){
   if(sheetDataCache[sheetName]) return sheetDataCache[sheetName];
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
 
-  // Берем цену из колонки 3 (индекс 2) и округляем до 2 знаков
   const rows = (data.values||[]).map(r => ({
     item: r[0],
-    price: r[2] ? parseFloat(r[2].toString().replace(',', '.')).toFixed(2) : "0.00"
+    price: r[2] ? parseFloat(r[2].toString().replace(',', '.')) : 0
   }));
 
   sheetDataCache[sheetName] = rows;
   return rows;
 }
 
-// подгружаем все листы заранее
+// загружаем все листы заранее
 async function loadAllSheets(){
   for(const name of SHEET_NAMES) await loadSheet(name);
 }
 loadAllSheets();
 
+// добавление товара
 async function addItem(){
   const item = document.getElementById("itemInput").value.trim();
   const qty = parseFloat(document.getElementById("qtyInput").value);
+  const unit = document.getElementById("unitSelect").value;
   const errorDiv = document.getElementById("error");
   errorDiv.textContent = "";
 
   if(!item || qty<=0){ errorDiv.textContent="Enter valid item and quantity >0"; return; }
 
-  // ищем товар во всех листах
   await loadAllSheets();
-  let found = null;
+
+  let found = null, sheetNameFound = null;
   for(const sheet of SHEET_NAMES){
     const rows = sheetDataCache[sheet];
     found = rows.find(r => normalize(r.item)===normalize(item));
-    if(found) break;
+    if(found){ sheetNameFound = sheet; break; }
   }
 
   if(!found){ errorDiv.textContent="Error: incorrect name"; return; }
 
-  // делаем subtotal с 2 знаками после запятой
-  const price = parseFloat(found.price);
-  const subtotal = (price * qty).toFixed(2);
+  let price = found.price;
 
+  // Если Wire или Conduit → учитываем выбранную единицу
+  if(sheetNameFound==="Wire" || sheetNameFound==="Conduit"){
+    if(unit==="foot") price = price / METER_TO_FOOT;
+  }
+
+  const subtotal = (price * qty).toFixed(2);
   orders.push({item, qty, price: price.toFixed(2), subtotal});
   renderOrders();
+
   document.getElementById("itemInput").value="";
   document.getElementById("qtyInput").value=1;
 }
@@ -108,7 +131,7 @@ function renderOrders(){
   let total=0;
   orders.forEach(o=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${o.item}</td><td>${o.qty}</td><td>${o.price}</td><td>${o.subtotal}</td>`;
+    tr.innerHTML=`<td>${o.item}</td><td>${o.qty}</td><td>$${o.price}</td><td>$${o.subtotal}</td>`;
     tbody.appendChild(tr);
     total += parseFloat(o.subtotal);
   });
