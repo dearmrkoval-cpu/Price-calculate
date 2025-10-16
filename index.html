@@ -12,6 +12,7 @@ input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 #result{margin-top:15px;font-weight:bold;font-size:20px;color:#007700;}
 #error{color:red;font-weight:bold;margin-top:5px;}
 #generatedOutput{background:#eee;padding:10px;white-space:pre-wrap;}
+#copyBtn{margin-top:10px;display:none;} /* скрыт по умолчанию */
 </style>
 </head>
 <body>
@@ -26,7 +27,6 @@ input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 </select>
 
 <label>Item name:</label>
-<!-- Input with autocomplete -->
 <input id="itemInput" list="suggestions" placeholder="e.g. BX2/12">
 <datalist id="suggestions"></datalist>
 
@@ -35,7 +35,7 @@ input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 
 <button onclick="addItem()">Add Item</button>
 <button onclick="clearOrders()">Clear Orders</button>
-<button onclick="generateList()">Generate</button> <!-- NEW BUTTON -->
+<button onclick="generateList()">Generate</button>
 
 <div id="error"></div>
 
@@ -51,12 +51,13 @@ input,button,select{width:100%;padding:10px;margin:8px 0;font-size:16px;}
 <div id="result"></div>
 
 <h3>Generated List:</h3>
-<pre id="generatedOutput"></pre> <!-- NEW BLOCK -->
+<pre id="generatedOutput"></pre>
+<button id="copyBtn" onclick="copyText()">Copy</button>
 
 <script>
 // Google Sheets configuration
-const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk"; // your Google Sheet ID
-const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8"; // your API Key
+const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk"; 
+const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8"; 
 const SHEET_NAMES = [
   "Wire",
   "Box's/covers",
@@ -73,39 +74,35 @@ let orders = [];
 // Conversion constant
 const METER_TO_FOOT = 3.28084;
 
-// Normalize string: remove spaces, lowercase, reorder BX/Romex patterns
+// Normalize string
 function normalize(str){
   return str
-    .replace(/\s+/g,'')             // remove spaces
-    .replace(/(.*)(bx)/i,'bx$1')    // put BX in front if at the end
-    .replace(/(.*)(romex)/i,'romex$1') // put Romex in front if at the end
+    .replace(/\s+/g,'')
+    .replace(/(.*)(bx)/i,'bx$1')
+    .replace(/(.*)(romex)/i,'romex$1')
     .toLowerCase();
 }
 
-// Load data from one sheet
+// Load data
 async function loadSheet(sheetName){
   if(sheetDataCache[sheetName]) return sheetDataCache[sheetName];
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
-
-  // Take item name from column 1, price from column 3
   const rows = (data.values||[]).map(r => ({
     item: r[0],
     price: r[2] ? parseFloat(r[2].toString().replace(',', '.')) : 0
   }));
-
   sheetDataCache[sheetName] = rows;
   return rows;
 }
 
-// Preload all sheets
 async function loadAllSheets(){
   for(const name of SHEET_NAMES) await loadSheet(name);
 }
 loadAllSheets();
 
-// Add item to order
+// Add item
 async function addItem(){
   const item = document.getElementById("itemInput").value.trim();
   const qty = parseFloat(document.getElementById("qtyInput").value);
@@ -133,8 +130,6 @@ async function addItem(){
   }
 
   let price = found.price;
-
-  // Apply unit conversion if Wire or Conduit
   if(sheetNameFound==="Wire" || sheetNameFound==="Conduit"){
     if(unit==="foot") price = price / METER_TO_FOOT;
   }
@@ -147,7 +142,7 @@ async function addItem(){
   document.getElementById("qtyInput").value=1;
 }
 
-// Render orders in table
+// Render
 function renderOrders(){
   const tbody = document.getElementById("ordersBody");
   tbody.innerHTML="";
@@ -161,36 +156,49 @@ function renderOrders(){
   document.getElementById("result").textContent=`Total: $${total.toFixed(2)}`;
 }
 
-// Clear all orders
+// Clear
 function clearOrders(){ 
   orders=[]; 
   renderOrders(); 
   document.getElementById("error").textContent=""; 
   document.getElementById("generatedOutput").textContent=""; 
+  document.getElementById("copyBtn").style.display="none";
 }
 
 // Generate formatted list
 function generateList(){
   let output = "";
   const unit = document.getElementById("unitSelect").value;
+  let total=0;
   orders.forEach(o=>{
     let unitSuffix = "";
     if(o.category==="Wire" || o.category==="Conduit"){
       unitSuffix = (unit==="meter" ? "m" : "ft");
     }
+    total += parseFloat(o.subtotal);
     output += `${o.qty}${unitSuffix} - ${o.item}\n`;
   });
+  if(orders.length>0){
+    output += `\nCoast of above material ${total.toFixed(2)}$`;
+  }
   document.getElementById("generatedOutput").textContent = output || "No items";
+  document.getElementById("copyBtn").style.display = (orders.length>0 ? "inline-block" : "none");
 }
 
-// Update autocomplete suggestions
+// Copy to clipboard
+function copyText(){
+  const text = document.getElementById("generatedOutput").textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    alert("Copied to clipboard!");
+  });
+}
+
+// Autocomplete
 function updateSuggestions(){
   const input = document.getElementById("itemInput").value.toLowerCase();
   const datalist = document.getElementById("suggestions");
   datalist.innerHTML = "";
-
-  if(input.length<2) return; // show suggestions only after 2 characters
-
+  if(input.length<2) return;
   let matches = [];
   for(const sheet of SHEET_NAMES){
     const rows = sheetDataCache[sheet] || [];
@@ -200,15 +208,12 @@ function updateSuggestions(){
       }
     });
   }
-
   matches.forEach(m=>{
     const option=document.createElement("option");
     option.value=m;
     datalist.appendChild(option);
   });
 }
-
-// Event listener for autocomplete
 document.getElementById("itemInput").addEventListener("input", updateSuggestions);
 </script>
 
