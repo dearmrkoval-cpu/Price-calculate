@@ -1,3 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Material Price Calculator</title>
+<style>
+body{font-family:system-ui,sans-serif;padding:20px;background:#f9f9f9;}
+input,button{width:100%;padding:10px;margin:8px 0;font-size:16px;}
+#orders table{width:100%;border-collapse:collapse;}
+#orders th,#orders td{border:1px solid #ccc;padding:8px;text-align:center;}
+#result{margin-top:15px;font-weight:bold;font-size:20px;color:#007700;}
+#error{color:red;font-weight:bold;margin-top:5px;}
+</style>
+</head>
+<body>
+
+<h2>Material Price Calculator</h2>
+
+<label>Item name:</label>
+<input id="itemInput" placeholder="e.g. BX2/12">
+
+<label>Quantity:</label>
+<input id="qtyInput" type="number" value="1" min="1">
+
+<button onclick="addItem()">Add Item</button>
+<button onclick="clearOrders()">Clear Orders</button>
+
+<div id="error"></div>
+
+<div id="orders">
+  <table>
+    <thead>
+      <tr><th>Item</th><th>Quantity</th><th>Price</th><th>Subtotal</th></tr>
+    </thead>
+    <tbody id="ordersBody"></tbody>
+  </table>
+</div>
+
+<div id="result"></div>
+
 <script>
 const SHEET_ID = "1-G3-rNuXbfeqqutJ-WQoWN7c4GeqVsNVwXj97xubTzk"; // твой Google Sheet ID
 const API_KEY = "AIzaSyDDkXyNbhR3owXHaCAwFOSAO6a_juCZoN8"; // твой API Key
@@ -67,5 +108,12 @@ function renderOrders(){
   document.getElementById("result").textContent=`Total: $${total.toFixed(2)}`;
 }
 
-function clearOrders(){ orders=[]; renderOrders(); document.getElementById("error").textContent=""; }
+function clearOrders(){ 
+  orders=[]; 
+  renderOrders(); 
+  document.getElementById("error").textContent=""; 
+}
 </script>
+
+</body>
+</html>
