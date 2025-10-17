@@ -1,3 +1,22 @@
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.5/auth0-spa-js.production.js"></script>
+<script>
+  let auth0Client = null;
+
+  async function initAuth() {
+    auth0Client = await createAuth0Client({
+      domain: "YOUR_DOMAIN",
+      client_id: "YOUR_CLIENT_ID"
+    });
+
+    const isAuthenticated = await auth0Client.isAuthenticated();
+    if (!isAuthenticated) {
+      window.location.href = "index.html"; // если не вошёл → обратно на логин
+    }
+  }
+
+  window.onload = initAuth;
+</script>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
