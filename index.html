@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MatCalc</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e86c2f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MatCalc">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+:root{
+  /* Dark theme (default) */
+  --bg:#0f0e0c;--surface:#1a1916;--surface2:#222018;
+  --border:#2e2c28;--border2:#3d3a34;
+  --text:#f0ece4;--muted:#7a7568;--dim:#4a4840;
+  --accent:#e86c2f;--accent2:#f0a050;
+  --green:#4caf7d;--red:#e05252;--blue:#5b9cf6;
+  --r:8px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+[data-theme="light"]{
+  /* Warm white (paper) theme */
+  --bg:#faf8f3;--surface:#ffffff;--surface2:#f5f1e8;
+  --border:#e8e3d8;--border2:#d4cdbc;
+  --text:#2c2a24;--muted:#7a7568;--dim:#a8a395;
+  --accent:#d4621f;--accent2:#b8541a;
+  --green:#2d8f5c;--red:#c84545;--blue:#3b7cd4;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);height:100dvh;overflow:hidden;}
+
+/* ══════════════════════════════════
+   LOGIN
+══════════════════════════════════ */
+#loginScreen{height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.lcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:360px;overflow:hidden;}
+.lhdr{background:#111;padding:28px 24px;text-align:center;}
+.lhdr h1{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);}
+.lhdr p{font-size:12px;color:var(--muted);margin-top:4px;font-family:'IBM Plex Mono',monospace;}
+.lbody{padding:24px;}
+.lbody label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:5px;margin-top:16px;}
+.lbody label:first-child{margin-top:0;}
+.lbody input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;font-family:'IBM Plex Sans',sans-serif;font-size:15px;color:var(--text);outline:none;}
+.lbody input:focus{border-color:var(--accent);}
+.btnlogin{width:100%;margin-top:20px;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:'IBM Plex Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;}
+.btnlogin:disabled{background:var(--muted);}
+#lerr{margin-top:10px;font-size:12px;color:var(--red);font-family:'IBM Plex Mono',monospace;min-height:16px;text-align:center;}
+
+/* ══════════════════════════════════
+   APP SHELL
+══════════════════════════════════ */
+#appScreen{display:none;height:100dvh;flex-direction:column;}
+
+/* ── DESKTOP NAV (hidden on mobile) ── */
+.desk-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:50px;flex-shrink:0;}
+.logo{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--accent);margin-right:28px;}
+.desk-tabs{display:flex;height:100%;}
+.desk-tab{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:0 18px;display:flex;align-items:center;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;}
+.desk-tab:hover{color:var(--text);}
+.desk-tab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.nav-r{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:var(--r);}
+.bsm{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 12px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;}
+.bsm:hover{color:var(--red);border-color:var(--red);}
+
+/* ── MOBILE HEADER (hidden on desktop) ── */
+.mob-header{display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;align-items:center;justify-content:space-between;flex-shrink:0;}
+.mob-logo{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--accent);}
+.mob-user{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);}
+
+/* ── BOTTOM NAV (hidden on desktop) ── */
+.bottom-nav{display:none;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:var(--safe-bottom);}
+.bnav-items{display:flex;}
+.bnav-item{flex:1;padding:10px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border:none;background:transparent;}
+.bnav-icon{font-size:20px;line-height:1;}
+.bnav-label{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);}
+.bnav-item.on .bnav-label{color:var(--accent);}
+
+/* ── PAGE CONTAINER ── */
+.pages{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.page{display:none;flex:1;overflow:hidden;}
+.page.on{display:flex;}
+
+/* ══════════════════════════════════
+   SHARED COMPONENTS
+══════════════════════════════════ */
+.inp{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--text);outline:none;}
+.inp:focus{border-color:var(--accent);}
+.inp::placeholder{color:var(--dim);}
+.tcat{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:2px 7px;border-radius:3px;}
+.pill{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap;}
+.pill:hover{color:var(--text);}
+.pill.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.bo{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .12s;}
+.bo:hover{border-color:var(--muted);color:var(--text);}
+.bo.gen{background:var(--accent);border-color:var(--accent);color:#fff;}
+.bo.gen:hover{background:var(--accent2);}
+.qi{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 4px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);width:100%;outline:none;text-align:center;}
+.qi:focus{border-color:var(--accent);}
+
+/* ══════════════════════════════════
+   DESKTOP CALC PAGE
+══════════════════════════════════ */
+.desk-calc{flex-direction:row;}
+.sidebar{width:290px;min-width:290px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+.sec{padding:14px 16px;border-bottom:1px solid var(--border);}
+.sec-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin-bottom:10px;}
+.lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:5px;margin-top:10px;}
+.lbl:first-child{margin-top:0;}
+.unit-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.ubtn{padding:7px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);color:var(--muted);cursor:pointer;transition:all .12s;}
+.ubtn.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.drop{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);margin-top:4px;overflow:hidden;display:none;max-height:220px;overflow-y:auto;z-index:50;position:relative;}
+.ditem{padding:9px 10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
+.ditem:hover{background:var(--border);}
+.dname{font-size:12px;font-weight:500;}
+.dmeta{display:flex;align-items:center;gap:8px;}
+.dcat-s{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);background:var(--border);padding:2px 6px;border-radius:3px;}
+.dprice{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent2);}
+.dnew{padding:9px 10px;display:flex;justify-content:space-between;align-items:center;background:rgba(232,108,47,.08);border-top:1px dashed var(--accent);cursor:pointer;}
+.dnew-t{font-size:12px;color:var(--accent);}
+.dnew-b{font-family:'IBM Plex Mono',monospace;font-size:9px;background:var(--accent);color:#fff;padding:2px 6px;border-radius:3px;}
+.badd{width:100%;padding:10px;background:var(--accent);border:none;border-radius:var(--r);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#fff;cursor:pointer;margin-top:10px;}
+.badd:hover{background:var(--accent2);}
+#addErr{font-size:11px;color:var(--red);font-family:'IBM Plex Mono',monospace;min-height:16px;margin-top:6px;}
+.qc{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px;}
+.qc-title{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:10px;}
+.qc-row{display:grid;grid-template-columns:1fr 14px 1fr 14px 1fr;align-items:center;gap:4px;margin-bottom:8px;}
+.qop{text-align:center;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted);}
+.qresult{background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;}
+.qrlabel{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);}
+.qrval{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--green);}
+.desk-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.toolbar{padding:11px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);flex-shrink:0;}
+.tlabel{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+.tright{display:flex;gap:8px;}
+.tbl-wrap{flex:1;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);padding:9px 16px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:1;}
+th.r{text-align:right;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--surface);}
+td{padding:10px 16px;font-size:13px;vertical-align:middle;}
+.tname{font-weight:500;cursor:pointer;}.tname:hover{color:var(--accent2);}
+.tnum{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);text-align:right;}
+.tprice{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;cursor:pointer;color:var(--muted);}.tprice:hover{color:var(--accent2);}
+.tsub{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;text-align:right;}
+.tdel{text-align:center;width:36px;}
+.xbtn{background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:3px;}.xbtn:hover{color:var(--red);background:rgba(224,82,82,.1);}
+.empty{padding:48px 20px;text-align:center;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.8;}
+.total-row{padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border2);background:var(--surface);flex-shrink:0;}
+.total-lbl{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+.total-val{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;}
+.profit-bar{padding:12px 16px;background:var(--surface2);border-top:1px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.profit-left{display:flex;flex-direction:column;gap:8px;}
+.plabel{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);}
+.pct-row{display:flex;gap:5px;align-items:center;}
+.pctbtn{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 9px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .12s;}
+.pctbtn:hover{border-color:var(--accent);color:var(--accent);}
+.pctbtn.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.pct-inp{width:68px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:5px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text);outline:none;text-align:center;}
+.pct-inp:focus{border-color:var(--accent);}
+.profit-right{display:flex;gap:16px;align-items:center;}
+.pline{display:flex;flex-direction:column;align-items:flex-end;}
+.pline-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:2px;}
+.pline-val{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--text);}
+.pline-val.g{color:var(--green);}.pline-val.a{color:var(--accent2);font-size:18px;}
+.pline.sep{padding-left:16px;border-left:1px solid var(--border2);}
+.out-sec{padding:12px 16px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;display:none;}
+.out-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin-bottom:8px;display:flex;justify-content:space-between;}
+.out-copy{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 10px;border-radius:3px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;}
+.out-copy:hover{color:var(--text);}
+.out-pre{font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.8;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;white-space:pre;}
+.stores-panel{width:230px;min-width:230px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;}
+.stores-hdr{padding:11px 14px;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);}
+.searching{padding:9px 14px;background:rgba(232,108,47,.08);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);min-height:36px;}
+.scard{padding:13px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;display:block;text-decoration:none;}
+.scard:hover{background:var(--surface2);}
+.scard-top{display:flex;justify-content:space-between;}
+.sname{font-size:13px;font-weight:600;}
+.sdomain{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;}
+.sarrow{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);}
+.hd .sname{color:#f96302;}.rona .sname{color:#e8453c;}.guil .sname{color:#e8a030;}.hh .sname{color:#c8272d;}
+.stores-hint{padding:10px 14px;font-size:11px;color:var(--dim);font-family:'IBM Plex Mono',monospace;line-height:1.5;margin-top:auto;border-top:1px solid var(--border);}
+
+/* ══════════════════════════════════
+   DESKTOP DB PAGE
+══════════════════════════════════ */
+.desk-db{flex-direction:column;overflow:hidden;}
+.db-inner{padding:22px;overflow-y:auto;flex:1;}
+.db-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.db-bar-l{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.db-search-inp{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px 14px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--text);width:240px;outline:none;}
+.db-search-inp:focus{border-color:var(--accent);}
+.db-search-inp::placeholder{color:var(--dim);}
+.badd2{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 16px;border-radius:var(--r);border:none;background:var(--accent);color:#fff;cursor:pointer;}
+.badd2:hover{background:var(--accent2);}
+.db-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.db-tbl{width:100%;border-collapse:collapse;}
+.db-tbl thead th{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);padding:10px 16px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2);}
+.db-tbl tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+.db-tbl tbody tr:last-child{border-bottom:none;}
+.db-tbl tbody tr:hover{background:var(--surface2);}
+.db-tbl tbody td{padding:10px 16px;font-size:13px;vertical-align:middle;}
+.pval{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent2);}
+.pedit{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 8px;border-radius:3px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;opacity:0;transition:opacity .15s;margin-left:8px;}
+.db-tbl tbody tr:hover .pedit{opacity:1;}
+.pedit:hover{border-color:var(--accent);color:var(--accent);}
+.price-source{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px;}
+.price-source a{color:var(--accent2);text-decoration:none;}
+.supplier-grid{display:grid;grid-template-columns:1fr 90px;gap:8px;align-items:end;margin-top:8px;}
+.supplier-grid.full{grid-template-columns:1fr;}
+.supplier-note{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);line-height:1.45;margin-top:6px;}
+.supplier-pill{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:2px 5px;display:inline-flex;gap:4px;align-items:center;}
+.abtn{font-size:13px;background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:3px;color:var(--dim);transition:all .1s;opacity:0;}
+.db-tbl tbody tr:hover .abtn{opacity:1;}
+.abtn.e:hover{color:var(--blue);background:rgba(91,156,246,.1);}
+.abtn.d:hover{color:var(--red);background:rgba(224,82,82,.1);}
+.loading-row td{text-align:center;padding:40px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--dim);}
+
+/* ══════════════════════════════════
+   MOBILE CALC PAGE
+══════════════════════════════════ */
+.mob-calc-page{flex-direction:column;overflow:hidden;}
+.qc-strip{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 16px;flex-shrink:0;}
+.qc-strip-label{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:8px;}
+.qc-strip-row{display:grid;grid-template-columns:1fr 16px 1fr 16px 1fr;align-items:center;gap:4px;}
+.mob-add-form{padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.mob-form-row{display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px;}
+.mob-inp{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;font-family:'IBM Plex Sans',sans-serif;font-size:15px;color:var(--text);outline:none;}
+.mob-inp::placeholder{color:var(--dim);}
+.mob-inp:focus{border-color:var(--accent);}
+.mob-unit-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
+.mob-ubtn{padding:9px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);color:var(--muted);cursor:pointer;}
+.mob-ubtn.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.mob-drop{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);margin-bottom:8px;overflow:hidden;display:none;max-height:180px;overflow-y:auto;}
+.mob-ditem{padding:11px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+.mob-ditem:last-child{border-bottom:none;}
+.mob-dname{font-size:14px;font-weight:500;}
+.mob-dprice{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent2);}
+.mob-dnew{padding:11px 12px;display:flex;justify-content:space-between;align-items:center;background:rgba(232,108,47,.08);border-top:1px dashed var(--accent);cursor:pointer;}
+.mob-dnew-t{font-size:13px;color:var(--accent);}
+.mob-badd{width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--r);font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:#fff;cursor:pointer;}
+#mob-addErr{font-size:12px;color:var(--red);font-family:'IBM Plex Mono',monospace;min-height:16px;margin-top:6px;}
+.mob-orders{flex:1;overflow-y:auto;}
+.order-card{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--bg);}
+.order-left{flex:1;min-width:0;}
+.order-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.order-name:active{color:var(--accent2);}
+.order-meta{display:flex;align-items:center;gap:8px;margin-top:3px;}
+.order-qty{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+.order-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.order-price{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+.order-sub{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;}
+.order-del{background:none;border:none;color:var(--dim);font-size:20px;padding:4px 8px;cursor:pointer;border-radius:6px;flex-shrink:0;}
+.mob-empty{padding:48px 20px;text-align:center;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.8;}
+.mob-total-section{background:var(--surface);border-top:1px solid var(--border2);padding:12px 16px;flex-shrink:0;}
+.mob-total-line{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.mob-profit-box{background:var(--surface2);border-radius:var(--r);padding:10px 12px;}
+.mob-pct-row{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;}
+.mob-pctbtn{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;}
+.mob-pctbtn.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.mob-pct-custom{width:60px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 4px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);outline:none;text-align:center;}
+.mob-profit-nums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.mob-pnum{display:flex;flex-direction:column;align-items:center;background:var(--bg);border-radius:6px;padding:8px 4px;}
+.mob-pnum-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px;}
+.mob-pnum-val{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;}
+.mob-gen-btn{width:100%;margin-top:10px;padding:12px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted);cursor:pointer;}
+.mob-options-row{display:grid;grid-template-columns:1fr 1.15fr;gap:8px;align-items:stretch;margin-bottom:8px;}
+.mob-options-row .mob-unit-row{margin-bottom:0;}
+.mob-options-row .mob-inp{margin-bottom:0!important;}
+.mob-action-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.mob-out{display:none;margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;}
+.mob-out-pre{font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.8;color:var(--muted);white-space:pre-wrap;margin-bottom:8px;}
+.mob-copy-btn{width:100%;padding:10px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);cursor:pointer;}
+
+/* ══════════════════════════════════
+   MOBILE DB PAGE
+══════════════════════════════════ */
+.mob-db-page{position:relative;flex-direction:column;overflow:hidden;}
+.mob-db-header{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.mob-db-search{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;font-family:'IBM Plex Sans',sans-serif;font-size:15px;color:var(--text);outline:none;margin-bottom:10px;}
+.mob-db-search::placeholder{color:var(--dim);}
+.mob-db-search:focus{border-color:var(--accent);}
+.cat-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+.cat-scroll::-webkit-scrollbar{display:none;}
+.mob-db-list{flex:1;overflow-y:auto;position:relative;}
+.db-card{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--bg);}
+.db-card-left{flex:1;}
+.db-card-name{font-size:14px;font-weight:500;margin-bottom:3px;}
+.db-card-meta{display:flex;gap:8px;align-items:center;}
+.db-card-unit{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);}
+.db-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+.db-card-price{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--accent2);}
+.db-card-btns{display:flex;gap:5px;}
+.db-card-btn{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;color:var(--muted);cursor:pointer;}
+.db-card-btn.del{color:var(--red);}
+.fab{position:absolute;bottom:16px;right:16px;width:54px;height:54px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(232,108,47,.4);z-index:10;}
+
+/* ══════════════════════════════════
+   MOBILE STORES PAGE
+══════════════════════════════════ */
+.mob-stores-page{flex-direction:column;overflow:hidden;}
+.mob-stores-header{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.mob-stores-label{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin-bottom:6px;}
+.mob-searching{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent);background:rgba(232,108,47,.08);border:1px solid rgba(232,108,47,.2);border-radius:6px;padding:8px 10px;}
+.mob-stores-list{flex:1;overflow-y:auto;}
+.mob-store-card{padding:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--bg);text-decoration:none;color:inherit;}
+.mob-store-card:active{background:var(--surface);}
+.mob-store-l{display:flex;align-items:center;gap:12px;}
+.mob-store-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
+.mob-store-name{font-size:15px;font-weight:600;}
+.mob-store-domain{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;}
+.mob-store-arrow{font-size:18px;color:var(--dim);}
+.hd-icon{background:rgba(249,99,2,.15);color:#f96302;}
+.rona-icon{background:rgba(232,69,60,.15);color:#e8453c;}
+.guil-icon{background:rgba(232,160,48,.15);color:#e8a030;}
+.hh-icon{background:rgba(200,39,45,.15);color:#c8272d;}
+
+/* ══════════════════════════════════
+   MOBILE SETTINGS PAGE
+══════════════════════════════════ */
+.mob-settings-page{flex-direction:column;overflow-y:auto;}
+.settings-sec{padding:16px;border-bottom:1px solid var(--border);}
+.settings-sec-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin-bottom:12px;}
+.settings-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);}
+.settings-row:last-child{border-bottom:none;}
+.settings-key{font-size:15px;}
+.settings-val{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+.logout-btn{width:100%;padding:14px;background:transparent;border:1px solid var(--red);border-radius:var(--r);font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);cursor:pointer;}
+
+/* ══════════════════════════════════
+   MODAL
+══════════════════════════════════ */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);padding:16px;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:400px;max-height:calc(100dvh - 32px);overflow:hidden;display:flex;flex-direction:column;}
+.mhdr{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.mtitle{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+.mclose{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:0 4px;line-height:1;}
+.mbody{padding:18px 20px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;min-height:0;}
+.mfield{margin-bottom:13px;}
+.mlbl{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:5px;}
+.minp{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--text);outline:none;}
+.minp:focus{border-color:var(--accent);}
+.mrow{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.mftr{padding:13px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;background:var(--surface);}
+.bcancel{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:10px 16px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;}
+.bsave{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:10px 16px;border-radius:var(--r);border:none;background:var(--accent);color:#fff;cursor:pointer;}
+.bsave:disabled{background:var(--muted);}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border2);border-left:3px solid var(--green);border-radius:var(--r);padding:11px 20px;font-family:'IBM Plex Mono',monospace;font-size:12px;display:none;align-items:center;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.4);z-index:200;animation:sup .2s ease;}
+.toast.err{border-left-color:var(--red);}
+@keyframes sup{from{transform:translateX(-50%) translateY(8px);opacity:0;}to{transform:translateX(-50%) translateY(0);opacity:1;}}
+
+/* ══════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════ */
+@media (max-width: 768px), (max-height: 500px) and (max-width: 1000px) {
+  html,body { width:100%;height:100dvh;min-height:0;overscroll-behavior:none;background:var(--bg); }
+  body { touch-action:manipulation; }
+  #loginScreen { min-height:100dvh;padding:max(20px,var(--safe-top)) max(18px,var(--safe-right)) max(20px,var(--safe-bottom)) max(18px,var(--safe-left)); }
+  #appScreen { height:100dvh;min-height:0;padding-bottom:calc(56px + var(--safe-bottom)); }
+  .desk-nav { display: none !important; }
+  .mob-header { display:flex!important;min-height:52px;padding:calc(9px + var(--safe-top)) max(16px,var(--safe-right)) 9px max(16px,var(--safe-left)); }
+  .bottom-nav { display: block !important; }
+  .bottom-nav { position:fixed;left:0;right:0;bottom:0;z-index:60;padding-left:var(--safe-left);padding-right:var(--safe-right);padding-bottom:0;margin:0;box-shadow:none; }
+  .bnav-item { min-height:calc(56px + var(--safe-bottom));padding:8px 0 calc(6px + var(--safe-bottom)); }
+  .bnav-icon { font-size:19px; }
+  .desk-calc { display: none !important; }
+  .desk-db { display: none !important; }
+  .mob-calc-page.on { display: flex !important; }
+  .mob-db-page.on { display: flex !important; }
+  .mob-stores-page.on { display: flex !important; }
+  .mob-settings-page.on { display: flex !important; }
+  .pages,.page { min-height:0; }
+  .pages { background:var(--bg);padding-bottom:0; }
+  .qc-strip { padding:8px max(14px,var(--safe-right)) 8px max(14px,var(--safe-left)); }
+  .qc-strip-label { margin-bottom:6px; }
+  .lbody input,.qi,.mob-inp,.mob-db-search,.minp,.mob-pct-custom { font-size:16px; }
+  .qi,.mob-inp,.mob-ubtn,.mob-badd,.mob-gen-btn,.mob-copy-btn,.db-card-btn,.themeBtn,.logout-btn { min-height:44px; }
+  .mob-add-form { position:relative;padding:9px max(14px,var(--safe-right)) 8px max(14px,var(--safe-left)); }
+  .mob-form-row { grid-template-columns:minmax(0,1fr) 76px;gap:8px;margin-bottom:8px; }
+  .mob-inp { padding:10px 11px; }
+  .mob-ubtn { padding:8px 4px; }
+  .mob-badd { padding:10px; }
+  #mob-addErr { min-height:0;margin-top:0; }
+  #mob-addErr:not(:empty) { min-height:16px;margin-top:6px; }
+  .mob-drop { position:absolute;left:14px;right:14px;z-index:30;max-height:min(38dvh,300px);box-shadow:0 10px 28px rgba(0,0,0,.4); }
+  .mob-orders { min-height:90px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable; }
+  .order-card { min-height:68px;padding:11px max(14px,var(--safe-right)) 11px max(14px,var(--safe-left)); }
+  .order-name { white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical; }
+  .order-del { min-width:44px;min-height:44px; }
+  .mob-total-section { max-height:46dvh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:10px max(14px,var(--safe-right)) 10px max(14px,var(--safe-left)); }
+  .mob-total-line { margin-bottom:8px; }
+  .mob-profit-box { padding:8px 10px; }
+  .mob-pct-row { display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:7px; }
+  .mob-pctbtn,.mob-pct-custom { width:100%;min-width:0;min-height:38px;padding:6px 3px; }
+  .mob-pnum { min-width:0;padding:7px 2px; }
+  .mob-pnum-val { max-width:100%;font-size:13px;overflow:hidden;text-overflow:ellipsis; }
+  .mob-gen-btn { margin-top:8px;padding:9px 6px; }
+  .mob-out { max-width:100%;overflow:auto; }
+  .mob-out-pre { overflow-wrap:anywhere;word-break:break-word; }
+  .mob-db-header,.mob-stores-header { padding:10px max(14px,var(--safe-right)) 10px max(14px,var(--safe-left)); }
+  .mob-db-search { margin-bottom:8px; }
+  .mob-db-list { padding-bottom:86px; }
+  .db-card { min-height:76px;padding:11px max(14px,var(--safe-right)) 11px max(14px,var(--safe-left));gap:8px; }
+  .db-card-left { min-width:0; }
+  .db-card-name { overflow-wrap:anywhere; }
+  .db-card-btn { min-width:44px;padding:6px; }
+  .fab { display:flex!important;position:absolute;right:max(16px,var(--safe-right));bottom:16px;left:auto;top:auto;margin:0;z-index:20; }
+  .mob-settings-page { padding-bottom:calc(12px + var(--safe-bottom));overscroll-behavior:contain;-webkit-overflow-scrolling:touch; }
+  .settings-sec { padding:14px max(16px,var(--safe-right)) 14px max(16px,var(--safe-left)); }
+  .toast { bottom:calc(72px + var(--safe-bottom));max-width:calc(100vw - 28px);white-space:normal;text-align:center; }
+  .overlay { padding:0;align-items:stretch; }
+  .modal { width:100%;max-width:none;height:100dvh;max-height:100dvh;border:0;border-radius:0; }
+  .mhdr { min-height:54px;padding:calc(10px + var(--safe-top)) max(16px,var(--safe-right)) 10px max(16px,var(--safe-left)); }
+  .mclose { width:44px;height:44px;font-size:24px; }
+  .mbody { padding:14px max(16px,var(--safe-right)) 18px max(16px,var(--safe-left)); }
+  .mftr { padding:10px max(16px,var(--safe-right)) calc(10px + var(--safe-bottom)) max(16px,var(--safe-left)); }
+  .bcancel,.bsave { min-height:44px;flex:1; }
+  .mrow,.supplier-grid { grid-template-columns:1fr;gap:8px; }
+}
+@media (max-width: 390px) {
+  .mob-options-row { grid-template-columns:1fr; }
+  .mob-action-row { grid-template-columns:1fr;gap:0; }
+  .mob-total-section { max-height:50dvh; }
+}
+@media (min-width: 769px) and (min-height: 501px) {
+  .mob-calc-page { display: none !important; }
+  .mob-db-page { display: none !important; }
+  .mob-stores-page { display: none !important; }
+  .mob-settings-page { display: none !important; }
+}
+
+select.minp option{background:var(--surface2);}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="loginScreen">
+  <div class="lcard">
+    <div class="lhdr"><h1>⬡ MATCALC</h1><p>Sign in to continue</p></div>
+    <div class="lbody">
+      <label>Email</label>
+      <input id="lEmail" type="email" placeholder="you@example.com" autocomplete="email">
+      <label>Password</label>
+      <input id="lPass" type="password" placeholder="••••••••" autocomplete="current-password">
+      <button class="btnlogin" id="loginBtn" onclick="doLogin()">Sign in</button>
+      <div id="lerr"></div>
+
+      <!-- Download buttons -->
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);text-align:center;margin-bottom:12px;">Get the app</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button onclick="downloadApp('apple')" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-size:13px;">
+            <span style="font-size:18px;"></span> Apple
+          </button>
+          <button onclick="downloadApp('android')" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-size:13px;">
+            <span style="font-size:18px;">🤖</span> Android
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SET PASSWORD (from invite/recovery link) ══ -->
+<div id="setPassScreen" style="display:none;height:100dvh;align-items:center;justify-content:center;padding:24px;">
+  <div class="lcard">
+    <div class="lhdr"><h1>⬡ MATCALC</h1><p>Set your password</p></div>
+    <div class="lbody">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5;">Welcome! Create a password to finish setting up your account.</p>
+      <label>New password</label>
+      <input id="spPass" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+      <label>Confirm password</label>
+      <input id="spPass2" type="password" placeholder="Repeat password" autocomplete="new-password">
+      <button class="btnlogin" id="spBtn" onclick="doSetPassword()">Set password & continue</button>
+      <div id="spErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- App download instructions modal (Apple PWA) -->
+<div class="overlay" id="installOverlay" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <div class="mhdr"><span class="mtitle" id="installTitle">Install app</span><button class="mclose" onclick="document.getElementById('installOverlay').style.display='none'">×</button></div>
+    <div class="mbody" id="installBody" style="font-size:13px;line-height:1.7;color:var(--text);"></div>
+    <div class="mftr"><button class="bsave" onclick="document.getElementById('installOverlay').style.display='none'">Got it</button></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="appScreen">
+
+  <!-- DESKTOP NAV -->
+  <nav class="desk-nav">
+    <span class="logo">⬡ MATCALC</span>
+    <div class="desk-tabs">
+      <div class="desk-tab on" onclick="deskSw('calc',this)">Calculator</div>
+      <div class="desk-tab" onclick="deskSw('db',this)">Database</div>
+    </div>
+    <div class="nav-r">
+      <div style="display:inline-flex;gap:0;border:1px solid var(--border2);border-radius:6px;overflow:hidden;margin-right:8px;">
+        <button class="themeBtn" data-mode="auto" onclick="setThemeMode('auto')" title="Auto (light 7-19)" style="font-family:'IBM Plex Mono',monospace;font-size:10px;padding:5px 8px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-right:1px solid var(--border2);">Auto</button>
+        <button class="themeBtn" data-mode="light" onclick="setThemeMode('light')" title="Light theme" style="font-family:'IBM Plex Mono',monospace;font-size:10px;padding:5px 8px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-right:1px solid var(--border2);">☀</button>
+        <button class="themeBtn" data-mode="dark" onclick="setThemeMode('dark')" title="Dark theme" style="font-family:'IBM Plex Mono',monospace;font-size:10px;padding:5px 8px;border:none;background:transparent;color:var(--muted);cursor:pointer;">☾</button>
+      </div>
+      <button class="bsm admin-only" style="display:none;border-color:var(--accent);color:var(--accent);" onclick="inviteUser()">✉ Invite user</button>
+      <span class="badge" id="userBadge"></span>
+      <button class="bsm" onclick="doLogout()">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- MOBILE HEADER -->
+  <div class="mob-header">
+    <span class="mob-logo">⬡ MATCALC</span>
+    <span class="mob-user" id="mobUserBadge"></span>
+  </div>
+
+  <div class="pages">
+
+    <!-- ══ DESKTOP CALC ══ -->
+    <div id="desk-calc" class="page desk-calc on">
+      <div class="sidebar">
+        <div class="sec">
+          <div class="sec-label">Units (wire & conduit)</div>
+          <div class="unit-row">
+            <div class="ubtn on" onclick="setU(this,'desk')">Meters</div>
+            <div class="ubtn" onclick="setU(this,'desk')">Feet</div>
+          </div>
+          <label class="lbl" style="margin-top:12px;">Pricing mode</label>
+          <select class="inp" id="priceMode" onchange="setPricingMode(this.value)">
+            <option value="best">Best supplier</option>
+            <option value="lumen">Lumen only</option>
+            <option value="city_electric">City Electric only</option>
+            <option value="guillevin">Guillevin only</option>
+            <option value="home_depot">Home Depot only</option>
+          </select>
+        </div>
+        <div class="sec" style="flex:1">
+          <div class="sec-label">Add item</div>
+          <label class="lbl">Search or enter item</label>
+          <input class="inp" id="srch" placeholder="e.g. BX 2/12…" oninput="doSearch(this.value,'desk')" autocomplete="off">
+          <div class="drop" id="drop"></div>
+          <label class="lbl" style="margin-top:10px;">Quantity</label>
+          <input class="inp" id="qty" type="number" value="1" min="0.01" step="any">
+          <button class="badd" onclick="addItem('desk')">+ Add to list</button>
+          <div id="addErr"></div>
+        </div>
+        <div class="sec">
+          <div class="qc">
+            <div class="qc-title">⚡ Quick Calculator</div>
+            <div class="qc-row">
+              <input class="qi" id="q1" value="487.50" oninput="qCalc('desk')">
+              <span class="qop">÷</span>
+              <input class="qi" id="q2" value="150" oninput="qCalc('desk')">
+              <span class="qop">=</span>
+              <input class="qi" id="q3" readonly style="background:var(--surface2);color:var(--green);">
+            </div>
+            <div class="qresult">
+              <span class="qrlabel">Price per unit</span>
+              <span class="qrval" id="qrv">$3.25</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="desk-main">
+        <div class="toolbar">
+          <span class="tlabel" id="countLbl">Order list — 0 items</span>
+          <div class="tright">
+            <button class="bo" onclick="clearAll()">✕ Clear</button>
+            <button class="bo" onclick="genBuyOptions('desk')">Buy options</button>
+            <button class="bo gen" onclick="genList('desk')">Generate list</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Item</th><th>Category</th><th class="r">Qty</th><th class="r">Price/unit</th><th class="r">Subtotal</th><th></th></tr></thead>
+            <tbody id="tbody"><tr><td colspan="6" class="empty">No items yet — search and add from the left panel</td></tr></tbody>
+          </table>
+        </div>
+        <div class="total-row"><span class="total-lbl">Total cost</span><span class="total-val" id="totalV">$0.00</span></div>
+        <div class="profit-bar">
+          <div class="profit-left">
+            <span class="plabel">Profit margin</span>
+            <div class="pct-row">
+              <button class="pctbtn" onclick="setPct(30,this)">30%</button>
+              <button class="pctbtn on" onclick="setPct(40,this)">40%</button>
+              <button class="pctbtn" onclick="setPct(50,this)">50%</button>
+              <input class="pct-inp" type="number" placeholder="%" oninput="setPctV(this.value)">
+            </div>
+          </div>
+          <div class="profit-right">
+            <div class="pline"><span class="pline-lbl">Cost</span><span class="pline-val" id="pCost">$0.00</span></div>
+            <div class="pline"><span class="pline-lbl">Profit</span><span class="pline-val g" id="pProfit">+$0.00</span></div>
+            <div class="pline sep"><span class="pline-lbl">Client price</span><span class="pline-val a" id="pClient">$0.00</span></div>
+          </div>
+        </div>
+        <div class="out-sec" id="outSec">
+          <div class="out-lbl">
+            <span>Generated list</span>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div style="display:flex;border:1px solid var(--border2);border-radius:5px;overflow:hidden;">
+                <button id="genCostBtn" class="bo" style="border:none;border-radius:0;padding:4px 10px;font-size:10px;background:var(--accent);color:#fff;" onclick="setGenMode('cost')">Cost</button>
+                <button id="genClientBtn" class="bo" style="border:none;border-radius:0;padding:4px 10px;font-size:10px;" onclick="setGenMode('client')">Client price</button>
+              </div>
+              <button class="out-copy" onclick="copyOut('desk')">Copy</button>
+            </div>
+          </div>
+          <pre class="out-pre" id="outPre"></pre>
+        </div>
+      </div>
+      <div class="stores-panel">
+        <div class="stores-hdr" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Search in stores</span>
+          <button onclick="openStoreManager()" style="background:none;border:1px solid var(--border2);border-radius:4px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;cursor:pointer;text-transform:none;letter-spacing:0;">Manage</button>
+        </div>
+        <div class="searching" id="searchingEl">— click an item —</div>
+        <div id="deskStoresList" style="flex:1;overflow-y:auto;"></div>
+        <div class="stores-hint">Click any item name in the table to search stores</div>
+      </div>
+    </div>
+
+    <!-- ══ DESKTOP DB ══ -->
+    <div id="desk-db" class="page desk-db">
+      <div class="db-inner">
+        <div class="db-bar">
+          <div class="db-bar-l">
+            <input class="db-search-inp" id="dbSearch" placeholder="Search items…" oninput="filterDB()">
+            <div id="catPills" style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="pill on" onclick="filterCat('',this)">All</button>
+            </div>
+            <button class="pill nolink-btn" onclick="toggleNoLinkFilter(this)" title="Show only items without Lumen link" style="border-color:var(--accent);color:var(--accent);">○ No link</button>
+          </div>
+          <button class="badd2" onclick="openM(null)">+ Add item</button>
+        </div>
+        <div class="db-wrap">
+          <table class="db-tbl">
+            <thead><tr><th>Item name</th><th>Category</th><th>Unit</th><th>Price</th><th style="text-align:center;">Link</th><th>Updated</th><th></th></tr></thead>
+            <tbody id="dbtbody"><tr class="loading-row"><td colspan="7">Loading database…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MOBILE CALC ══ -->
+    <div id="mob-calc" class="page mob-calc-page on">
+      <div class="qc-strip">
+        <div class="qc-strip-label">⚡ Quick Calc</div>
+        <div class="qc-strip-row">
+          <input class="qi" id="mq1" value="487.50" oninput="qCalc('mob')">
+          <span class="qop">÷</span>
+          <input class="qi" id="mq2" value="150" oninput="qCalc('mob')">
+          <span class="qop">=</span>
+          <input class="qi" id="mq3" readonly style="background:var(--surface2);color:var(--green);">
+        </div>
+      </div>
+      <div class="mob-add-form">
+        <div class="mob-form-row">
+          <input class="mob-inp" id="mob-srch" placeholder="Search item…" oninput="doSearch(this.value,'mob')" autocomplete="off">
+          <input class="mob-inp" id="mob-qty" type="number" value="1" min="0.01" step="any" style="text-align:center;">
+        </div>
+        <div class="mob-drop" id="mob-drop"></div>
+        <div class="mob-options-row">
+          <div class="mob-unit-row">
+            <button class="mob-ubtn on" onclick="setU(this,'mob')">Meters</button>
+            <button class="mob-ubtn" onclick="setU(this,'mob')">Feet</button>
+          </div>
+          <select class="mob-inp" id="mob-priceMode" onchange="setPricingMode(this.value)">
+            <option value="best">Best supplier</option>
+            <option value="lumen">Lumen only</option>
+            <option value="city_electric">City Electric only</option>
+            <option value="guillevin">Guillevin only</option>
+            <option value="home_depot">Home Depot only</option>
+          </select>
+        </div>
+        <button class="mob-badd" onclick="addItem('mob')">+ Add to list</button>
+        <div id="mob-addErr"></div>
+      </div>
+      <div class="mob-orders" id="mob-orders">
+        <div class="mob-empty" id="mob-empty">No items yet<br>Search and add above</div>
+      </div>
+      <div class="mob-total-section">
+        <div class="mob-total-line">
+          <span class="total-lbl">Total cost</span>
+          <span class="total-val" id="mob-totalV">$0.00</span>
+        </div>
+        <div class="mob-profit-box">
+          <div class="mob-pct-row">
+            <button class="mob-pctbtn" onclick="mobSetPct(30,this)">30%</button>
+            <button class="mob-pctbtn on" onclick="mobSetPct(40,this)">40%</button>
+            <button class="mob-pctbtn" onclick="mobSetPct(50,this)">50%</button>
+            <input class="mob-pct-custom" type="number" placeholder="%" oninput="mobSetPctV(this.value)">
+          </div>
+          <div class="mob-profit-nums">
+            <div class="mob-pnum"><span class="mob-pnum-lbl">Cost</span><span class="mob-pnum-val" id="mob-pCost">$0.00</span></div>
+            <div class="mob-pnum"><span class="mob-pnum-lbl">Profit</span><span class="mob-pnum-val" style="color:var(--green)" id="mob-pProfit">+$0.00</span></div>
+            <div class="mob-pnum"><span class="mob-pnum-lbl">Client</span><span class="mob-pnum-val" style="color:var(--accent2)" id="mob-pClient">$0.00</span></div>
+          </div>
+        </div>
+        <div class="mob-action-row">
+          <button class="mob-gen-btn" onclick="genBuyOptions('mob')">Buy options</button>
+          <button class="mob-gen-btn" onclick="genList('mob')">Generate list</button>
+        </div>
+        <div class="mob-out" id="mob-out">
+          <div style="display:flex;border:1px solid var(--border2);border-radius:6px;overflow:hidden;margin-bottom:8px;">
+            <button id="mob-genCostBtn" class="gentoggle on" style="flex:1;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;" onclick="setGenMode('cost')">Cost</button>
+            <button id="mob-genClientBtn" class="gentoggle" style="flex:1;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px;border:none;background:transparent;color:var(--muted);cursor:pointer;" onclick="setGenMode('client')">Client price</button>
+          </div>
+          <pre class="mob-out-pre" id="mob-outPre"></pre>
+          <button class="mob-copy-btn" onclick="copyOut('mob')">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MOBILE DB ══ -->
+    <div id="mob-db" class="page mob-db-page">
+      <div class="mob-db-header">
+        <input class="mob-db-search" id="mob-dbSearch" placeholder="Search items…" oninput="filterDB()">
+        <div class="cat-scroll" id="mob-catPills">
+          <button class="pill on" onclick="filterCat('',this)">All</button>
+        </div>
+        <button class="pill nolink-btn" onclick="toggleNoLinkFilter(this)" style="margin-top:8px;border-color:var(--accent);color:var(--accent);">○ Show items without Lumen link</button>
+      </div>
+      <div class="mob-db-list" id="mob-dbtbody">
+        <div class="mob-empty">Loading database…</div>
+      </div>
+      <button class="fab" onclick="openM(null)" aria-label="Add item">+</button>
+    </div>
+
+    <!-- ══ MOBILE STORES ══ -->
+    <div id="mob-stores" class="page mob-stores-page">
+      <div class="mob-stores-header">
+        <div class="mob-stores-label">Currently searching</div>
+        <div class="mob-searching" id="mob-searchingEl">— tap an item name in Calc —</div>
+      </div>
+      <div class="mob-stores-list" id="mobStoresList"></div>
+    </div>
+
+    <!-- ══ MOBILE SETTINGS ══ -->
+    <div id="mob-settings" class="page mob-settings-page">
+      <div class="settings-sec">
+        <div class="settings-sec-label">Appearance</div>
+        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:10px;">
+          <span class="settings-key">Theme</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+            <button class="themeBtn" data-mode="auto" onclick="setThemeMode('auto')" style="font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px 6px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;">Auto</button>
+            <button class="themeBtn" data-mode="light" onclick="setThemeMode('light')" style="font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px 6px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;">☀ Light</button>
+            <button class="themeBtn" data-mode="dark" onclick="setThemeMode('dark')" style="font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px 6px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;">☾ Dark</button>
+          </div>
+          <div style="font-size:10px;color:var(--dim);font-family:'IBM Plex Mono',monospace;line-height:1.5;">Auto: light 7:00–19:00, dark 19:00–7:00</div>
+        </div>
+      </div>
+      <div class="settings-sec">
+        <div class="settings-sec-label">Account</div>
+        <div class="settings-row"><span class="settings-key">Email</span><span class="settings-val" id="mob-settingsEmail">—</span></div>
+        <div class="settings-row"><span class="settings-key">Role</span><span class="settings-val" id="mob-settingsRole">User</span></div>
+        <div class="settings-row"><span class="settings-key">Session timeout</span><span class="settings-val">30 min</span></div>
+      </div>
+      <div class="settings-sec admin-only" style="display:none;">
+        <div class="settings-sec-label">Admin — invite users</div>
+        <div class="settings-row"><span class="settings-key">Send registration invite</span>
+          <button onclick="inviteUser()" style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:6px 12px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;">✉ Invite</button>
+        </div>
+      </div>
+      <div class="settings-sec">
+        <div class="settings-sec-label">Database</div>
+        <div class="settings-row"><span class="settings-key">Auto-refresh</span><span class="settings-val">Every 60s</span></div>
+        <div class="settings-row"><span class="settings-key">Add category</span>
+          <button onclick="addCategory()" style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:6px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;">+ Add</button>
+        </div>
+      </div>
+      <div class="settings-sec">
+        <div class="settings-sec-label" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Stores</span>
+          <button onclick="addStore()" style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:6px 12px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;">+ Add store</button>
+        </div>
+        <div id="mob-storeManagerList"></div>
+      </div>
+      <div style="padding:16px;">
+        <button class="logout-btn" onclick="doLogout()">Sign out</button>
+      </div>
+    </div>
+
+  </div><!-- end pages -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="bnav-items">
+      <button class="bnav-item on" onclick="mobSw('calc',this)"><span class="bnav-icon">🧮</span><span class="bnav-label">Calc</span></button>
+      <button class="bnav-item" onclick="mobSw('db',this)"><span class="bnav-icon">📦</span><span class="bnav-label">Database</span></button>
+      <button class="bnav-item" onclick="mobSw('stores',this)"><span class="bnav-icon">🏪</span><span class="bnav-label">Stores</span></button>
+      <button class="bnav-item" onclick="mobSw('settings',this)"><span class="bnav-icon">⚙️</span><span class="bnav-label">Settings</span></button>
+    </div>
+  </div>
+
+</div><!-- end appScreen -->
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="modal">
+    <div class="mhdr"><span class="mtitle" id="mtitle">Add new item</span><button class="mclose" onclick="closeModal()">×</button></div>
+    <div class="mbody">
+      <div class="mfield"><label class="mlbl">Item name</label><input class="minp" id="mname" placeholder="e.g. BX 4/12"></div>
+      <div class="mrow">
+        <div class="mfield"><label class="mlbl">Category</label>
+          <div style="display:flex;gap:6px;">
+            <select class="minp" id="mcat" style="flex:1;"></select>
+            <button type="button" class="bo" style="white-space:nowrap;padding:8px 10px;font-size:12px;" onclick="addCategory()" title="Add category">+</button>
+          </div>
+        </div>
+        <div class="mfield"><label class="mlbl">Unit</label>
+          <select class="minp" id="munit"><option>per m</option><option>per ft</option><option>each</option><option>per box</option></select>
+        </div>
+      </div>
+      <div class="mfield">
+        <label class="mlbl">Price before tax ($)</label>
+        <input class="minp" id="mprice" type="number" step="0.01" min="0" placeholder="0.00" oninput="updateTaxPreview()">
+        <div id="taxPreview" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:6px;">With 13% tax: <span style="color:var(--accent2)">$0.00</span></div>
+      </div>
+      <div class="mfield">
+        <label class="mlbl">Lumen product URL <span style="color:var(--dim);text-transform:none;">(for auto price update)</span></label>
+        <input class="minp" id="mlumenUrl" type="url" placeholder="https://www.lumen.ca/en/products/...">
+      </div>
+      <div class="mfield">
+        <label class="mlbl">Home Depot product URL</label>
+        <input class="minp" id="mhomeDepotUrl" type="url" placeholder="https://www.homedepot.ca/product/...">
+        <div class="supplier-grid">
+          <div>
+            <label class="mlbl" style="margin-top:0;">Home Depot total price before tax ($)</label>
+            <input class="minp" id="mhomeDepotPrice" type="number" step="0.01" min="0" placeholder="optional">
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:10px;">
+            <input id="mhomeDepotSale" type="checkbox"> Sale
+          </label>
+        </div>
+        <div class="supplier-grid">
+          <div>
+            <label class="mlbl" style="margin-top:0;">Package quantity</label>
+            <input class="minp" id="mhomeDepotQty" type="number" step="0.001" min="0" placeholder="1">
+          </div>
+          <div>
+            <label class="mlbl" style="margin-top:0;">Unit</label>
+            <select class="minp" id="mhomeDepotUnit"><option value="each">each</option><option value="m">m</option><option value="ft">ft</option><option value="box">box</option></select>
+          </div>
+        </div>
+        <div class="supplier-note">Example: $284 for BX 2/12 75m -> price per meter is calculated automatically.</div>
+        <button type="button" class="bo" id="mhomeDepotRemove" style="display:none;margin-top:8px;color:var(--red);border-color:var(--red);" onclick="deleteHomeDepotSupplier()">Remove Home Depot</button>
+      </div>
+      <div class="mfield">
+        <label class="mlbl">Other supplier links</label>
+        <div id="supplierRows"></div>
+        <button type="button" class="bo" style="margin-top:8px;" onclick="addSupplierRow()">+ Add supplier link</button>
+      </div>
+    </div>
+    <div class="mftr"><button class="bcancel" onclick="closeModal()">Cancel</button><button class="bsave" id="msave" onclick="saveItem()">Save to database</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span></div>
+
+<!-- STORE MANAGER MODAL (desktop) -->
+<div class="overlay" id="storeOverlay" onclick="closeStoreManager(event)">
+  <div class="modal">
+    <div class="mhdr"><span class="mtitle">Manage stores</span><button class="mclose" onclick="closeStoreManagerBtn()">×</button></div>
+    <div class="mbody">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5;">To add a store: open its website, search for <b style="color:var(--accent2)">wire</b>, copy the full URL from the address bar, then click "+ Add store" and paste it.</p>
+      <div id="storeManagerList" style="max-height:320px;overflow-y:auto;"></div>
+    </div>
+    <div class="mftr"><button class="bcancel" onclick="closeStoreManagerBtn()">Close</button><button class="bsave" onclick="addStore()">+ Add store</button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL  = "https://plgnvfzfqmwcrghsteey.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsZ252ZnpmcW13Y3JnaHN0ZWV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMjA3NzEsImV4cCI6MjA5NDg5Njc3MX0.6dw88NNWWcu8DoktST2TU_6TiIPl8qAD6QDWXlQYPo0";
+const TABLE = "materials";
+const PRICE_TABLE = "material_prices";
+const TAX_RATE = 0.13; // 13% tax
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const SUPPLIERS = [
+  { key:'lumen', name:'Lumen' },
+  { key:'city_electric', name:'City Electric' },
+  { key:'guillevin', name:'Guillevin' },
+  { key:'home_depot', name:'Home Depot' }
+];
+
+// ══ AUTH ══
+let logoutTimer, refreshInterval;
+let currentRole = 'user';
+const TIMEOUT = 30 * 60 * 1000;
+
+// Detect invite/recovery links — Supabase puts tokens in URL hash
+async function checkSession() {
+  const hash = window.location.hash;
+  // Invite & recovery links contain type=invite or type=recovery
+  if (hash.includes('type=invite') || hash.includes('type=recovery') || hash.includes('access_token')) {
+    // Supabase JS auto-parses the hash into a session
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && (hash.includes('type=invite') || hash.includes('type=recovery'))) {
+      showSetPassword();
+      return;
+    }
+  }
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) { await afterLogin(session.user.email); }
+}
+
+function showSetPassword() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('setPassScreen').style.display = 'flex';
+}
+
+async function doSetPassword() {
+  const p1 = document.getElementById('spPass').value;
+  const p2 = document.getElementById('spPass2').value;
+  const err = document.getElementById('spErr');
+  const btn = document.getElementById('spBtn');
+  err.textContent = '';
+  if (p1.length < 6) { err.textContent = 'Password must be at least 6 characters'; return; }
+  if (p1 !== p2) { err.textContent = 'Passwords do not match'; return; }
+  btn.disabled = true; btn.textContent = 'Setting…';
+  const { data, error } = await sb.auth.updateUser({ password: p1 });
+  btn.disabled = false; btn.textContent = 'Set password & continue';
+  if (error) { err.textContent = error.message; return; }
+  // Clear the hash and continue into the app
+  history.replaceState(null, '', window.location.pathname);
+  document.getElementById('setPassScreen').style.display = 'none';
+  await afterLogin(data.user.email);
+}
+
+async function doLogin() {
+  const email = document.getElementById('lEmail').value.trim();
+  const pass = document.getElementById('lPass').value;
+  const err = document.getElementById('lerr');
+  const btn = document.getElementById('loginBtn');
+  err.textContent = '';
+  if (!email || !pass) { err.textContent = 'Enter email and password'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.disabled = false; btn.textContent = 'Sign in';
+  if (error) { err.textContent = 'Wrong email or password'; return; }
+  await afterLogin(data.user.email);
+}
+
+async function doLogout() {
+  clearTimeout(logoutTimer);
+  clearInterval(refreshInterval);
+  await sb.auth.signOut();
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('lPass').value = '';
+  orders = [];
+}
+
+// Fetch role then show app
+async function afterLogin(email) {
+  const { data: { user } } = await sb.auth.getUser();
+  if (user) {
+    const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single();
+    currentRole = profile?.role || 'user';
+  }
+  showApp(email);
+}
+
+function showApp(email) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('setPassScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'flex';
+  document.getElementById('userBadge').textContent = email;
+  document.getElementById('mobUserBadge').textContent = email;
+  document.getElementById('mob-settingsEmail').textContent = email;
+  // Show/hide admin-only invite UI
+  const isAdmin = currentRole === 'admin';
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+  const roleEl = document.getElementById('mob-settingsRole');
+  if (roleEl) roleEl.textContent = isAdmin ? 'Admin' : 'User';
+  resetTimer();
+  ['mousemove','keydown','click','scroll','touchstart'].forEach(e =>
+    document.addEventListener(e, resetTimer, { passive: true }));
+  loadDB();
+  buildStoreLists();
+  renderStoreManager();
+  refreshInterval = setInterval(() => loadDB(true), 60000);
+}
+
+function resetTimer() {
+  clearTimeout(logoutTimer);
+  logoutTimer = setTimeout(() => {
+    doLogout();
+    document.getElementById('lerr').textContent = 'Session expired — please sign in again';
+  }, TIMEOUT);
+}
+
+// ══ INVITE (admin only) ══
+async function inviteUser() {
+  const email = prompt('Email address to invite:');
+  if (!email || !email.trim()) return;
+  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email.trim())) { toast('⚠ Enter a valid email', true); return; }
+  toast('Sending invite…');
+  const { data: { session } } = await sb.auth.getSession();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-user`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON
+      },
+      body: JSON.stringify({
+        email: email.trim(),
+        redirectTo: window.location.origin + window.location.pathname
+      })
+    });
+    const result = await res.json();
+    if (res.ok && result.success) { toast('✓ Invite sent to ' + email.trim()); }
+    else { toast('⚠ ' + (result.error || 'Failed to send invite'), true); }
+  } catch (e) {
+    toast('⚠ Error sending invite', true);
+  }
+}
+
+// ══ APP DOWNLOAD ══
+function downloadApp(platform) {
+  const overlay = document.getElementById('installOverlay');
+  const title = document.getElementById('installTitle');
+  const body = document.getElementById('installBody');
+  if (platform === 'android') {
+    title.textContent = 'Install on Android';
+    body.innerHTML = `
+      <p style="margin-bottom:12px;">Download the Android app (APK):</p>
+      <a href="matcalc.apk" download style="display:block;text-align:center;padding:12px;background:var(--accent);color:#fff;border-radius:var(--r);text-decoration:none;font-family:'IBM Plex Mono',monospace;font-size:13px;margin-bottom:14px;">⬇ Download MatCalc.apk</a>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;">After downloading, open the file and allow installation from this source if prompted. The app updates automatically when online.</p>`;
+  } else {
+    title.textContent = 'Install on iPhone';
+    body.innerHTML = `
+      <p style="margin-bottom:12px;line-height:1.6;">Apple doesn't allow direct app downloads. To install MatCalc as an app:</p>
+      <ol style="padding-left:20px;line-height:1.9;font-size:13px;">
+        <li>Open this page in <b>Safari</b></li>
+        <li>Tap the <b>Share</b> button (square with arrow ↑)</li>
+        <li>Scroll down and tap <b>Add to Home Screen</b></li>
+        <li>Tap <b>Add</b></li>
+      </ol>
+      <p style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.6;">The app icon appears on your home screen and opens full-screen like a native app. It updates automatically.</p>`;
+  }
+  overlay.style.display = 'flex';
+}
+
+document.getElementById('lPass').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+document.getElementById('lEmail').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('lPass').focus(); });
+document.getElementById('spPass2').addEventListener('keydown', e => { if (e.key==='Enter') doSetPassword(); });
+
+// ══ THEME ══
+// Modes: 'auto' (default — light 7:00-19:00, dark otherwise), 'light', 'dark'
+function getThemeMode() { return localStorage.getItem('themeMode') || 'auto'; }
+function setThemeMode(mode) { localStorage.setItem('themeMode', mode); applyTheme(); renderThemeButtons(); }
+
+function resolveTheme() {
+  const mode = getThemeMode();
+  if (mode === 'light' || mode === 'dark') return mode;
+  // Auto by clock: 7:00–19:00 is light, else dark
+  const hour = new Date().getHours();
+  return (hour >= 7 && hour < 19) ? 'light' : 'dark';
+}
+
+function applyTheme() {
+  const theme = resolveTheme();
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  // Update browser chrome color
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#faf8f3' : '#0f0e0c');
+}
+
+function renderThemeButtons() {
+  const mode = getThemeMode();
+  document.querySelectorAll('.themeBtn').forEach(el => {
+    const on = el.dataset.mode === mode;
+    el.style.background = on ? 'var(--accent)' : 'transparent';
+    el.style.color = on ? '#fff' : 'var(--muted)';
+    el.style.borderColor = on ? 'var(--accent)' : 'var(--border2)';
+  });
+}
+
+// Apply theme on load, and re-check every minute (so auto mode flips at 7:00/19:00)
+applyTheme();
+renderThemeButtons();
+setInterval(applyTheme, 60 * 1000);
+
+checkSession();
+
+// ══ DATABASE ══
+let dbItems = [], dbFilter = '', catFilter = '', editingId = null, customCats = [];
+let supplierPricesReady = false, pricingMode = localStorage.getItem('pricingMode') || 'best';
+if (pricingMode === 'lumen_fallback') pricingMode = 'best';
+
+function getSavedCats() { try { return JSON.parse(localStorage.getItem('customCats')||'[]'); } catch { return []; } }
+function saveCats() { try { localStorage.setItem('customCats', JSON.stringify(customCats)); } catch {} }
+function getAllCats() {
+  const fromDB = [...new Set(dbItems.map(i => i.category).filter(Boolean))];
+  return [...new Set([...fromDB, ...customCats])].sort();
+}
+
+async function loadDB(silent=false) {
+  const { data, error } = await sb.from(TABLE).select('*').order('name');
+  if (error) { if (!silent) toast('⚠ Error loading database: '+error.message, true); return; }
+  dbItems = data || [];
+  const { data: prices, error: priceError } = await sb.from(PRICE_TABLE).select('*');
+  supplierPricesReady = !priceError;
+  if (supplierPricesReady) {
+    const byMaterial = {};
+    (prices || []).forEach(p => {
+      const id = p.material_id;
+      if (!byMaterial[id]) byMaterial[id] = [];
+      byMaterial[id].push(p);
+    });
+    dbItems.forEach(item => {
+      item.supplier_prices = normalizeSupplierPrices(item, byMaterial[item.id] || []);
+    });
+  } else {
+    dbItems.forEach(item => { item.supplier_prices = normalizeSupplierPrices(item, []); });
+    if (!silent) toast('Supplier price table not found yet. Using old material prices.', true);
+  }
+  const saved = getSavedCats();
+  saved.forEach(c => { if (!customCats.includes(c)) customCats.push(c); });
+  renderDB(); buildCatPills(); buildCatSelect(); renderMobDB(); syncPricingModeControls();
+}
+
+function supplierName(key) {
+  return (SUPPLIERS.find(s => s.key === key) || { name:key || 'Supplier' }).name;
+}
+
+function normalizeSupplierPrices(item, prices) {
+  const list = (prices || []).filter(p => p && (p.price != null || p.product_url)).map(p => ({
+    id: p.id,
+    material_id: p.material_id || item.id,
+    supplier_key: p.supplier_key || p.supplier || 'supplier',
+    supplier_name: p.supplier_name || supplierName(p.supplier_key || p.supplier),
+    price: p.price == null ? null : (parseFloat(p.price) || 0),
+    product_url: p.product_url || null,
+    package_qty: parseFloat(p.package_qty || 1) || 1,
+    package_unit: p.package_unit || 'each',
+    on_sale: !!p.on_sale,
+    available: p.available !== false,
+    updated_at: p.updated_at || item.updated_at
+  }));
+  if (item.price != null && !list.some(p => p.supplier_key === 'lumen')) {
+    list.push({
+      material_id: item.id,
+      supplier_key: 'lumen',
+      supplier_name: 'Lumen',
+      price: parseFloat(item.price) || 0,
+      product_url: item.lumen_url || null,
+      package_qty: 1,
+      package_unit: 'each',
+      on_sale: !!item.on_sale,
+      available: true,
+      updated_at: item.updated_at
+    });
+  }
+  return list;
+}
+
+function activeSupplierPrices(item) {
+  return (item?.supplier_prices || []).filter(p => p.available !== false && p.price != null && p.price >= 0);
+}
+
+function getMaterialPrice(item, mode = pricingMode) {
+  if (!item) return { price:0, supplier_key:'manual', supplier_name:'Manual', product_url:null, on_sale:false, unavailable:false };
+  const prices = activeSupplierPrices(item);
+  const byKey = key => prices.find(p => p.supplier_key === key);
+  let picked = null;
+  if (mode === 'best') picked = prices.slice().sort((a,b) => a.price - b.price)[0];
+  else picked = byKey(mode);
+  if (picked) return { ...picked, unavailable:false };
+  return {
+    price:null,
+    supplier_key:mode,
+    supplier_name:supplierName(mode),
+    product_url:null,
+    on_sale:false,
+    unavailable:true
+  };
+}
+
+function supplierPriceSummary(item) {
+  const prices = activeSupplierPrices(item);
+  if (!prices.length) return '<span style="color:var(--dim)">-</span>';
+  return prices
+    .slice()
+    .sort((a,b) => a.price - b.price)
+    .map(p => `<span class="supplier-pill">${p.supplier_name}: $${p.price.toFixed(2)}${p.package_qty && p.package_qty != 1 ? ' ('+p.package_qty+' '+p.package_unit+')' : ''}${p.on_sale?' SALE':''}</span>`)
+    .join(' ');
+}
+
+function setPricingMode(mode) {
+  pricingMode = mode;
+  localStorage.setItem('pricingMode', mode);
+  syncPricingModeControls();
+}
+
+function syncPricingModeControls() {
+  ['priceMode','mob-priceMode'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value !== pricingMode) el.value = pricingMode;
+  });
+}
+
+function buildCatPills() {
+  const cats = getAllCats();
+  ['catPills','mob-catPills'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '';
+    const all = document.createElement('button');
+    all.className = 'pill' + (!catFilter ? ' on' : '');
+    all.textContent = 'All';
+    all.onclick = () => filterCat('', all);
+    el.appendChild(all);
+    cats.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'pill' + (catFilter===c ? ' on' : '');
+      b.textContent = c;
+      b.onclick = () => filterCat(c, b);
+      el.appendChild(b);
+    });
+  });
+}
+
+function buildCatSelect() {
+  const sel = document.getElementById('mcat');
+  const cur = sel.value;
+  sel.innerHTML = '';
+  getAllCats().forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c; sel.appendChild(o);
+  });
+  if (cur && getAllCats().includes(cur)) sel.value = cur;
+}
+
+function addCategory() {
+  const name = prompt('New category name:');
+  if (!name || !name.trim()) return;
+  const cat = name.trim();
+  if (getAllCats().includes(cat)) { toast('Category already exists', true); return; }
+  customCats.push(cat); saveCats();
+  buildCatSelect(); buildCatPills();
+  document.getElementById('mcat').value = cat;
+  toast('✓ Category "'+cat+'" added');
+}
+
+let noLinkFilter = false;
+
+function toggleNoLinkFilter(btn) {
+  noLinkFilter = !noLinkFilter;
+  btn.classList.toggle('on', noLinkFilter);
+  document.querySelectorAll('.nolink-btn').forEach(b => b.classList.toggle('on', noLinkFilter));
+  renderDB(); renderMobDB();
+}
+
+function filterCat(cat, btn) {
+  catFilter = cat;
+  document.querySelectorAll('#catPills .pill, #mob-catPills .pill').forEach(b => {
+    if (!b.classList.contains('nolink-btn')) b.classList.remove('on');
+  });
+  if (btn) btn.classList.add('on');
+  renderDB(); renderMobDB();
+}
+
+function filterDB() {
+  dbFilter = (document.getElementById('dbSearch')?.value || document.getElementById('mob-dbSearch')?.value || '').toLowerCase();
+  renderDB(); renderMobDB();
+}
+
+function getFiltered() {
+  return dbItems.filter(i => {
+    const mc = !catFilter || i.category === catFilter;
+    const ms = !dbFilter || i.name.toLowerCase().includes(dbFilter) || (i.category||'').toLowerCase().includes(dbFilter);
+    const ml = !noLinkFilter || !i.lumen_url;
+    return mc && ms && ml;
+  });
+}
+
+function renderDB() {
+  const tbody = document.getElementById('dbtbody');
+  if (!tbody) return;
+  const filtered = getFiltered();
+  if (!filtered.length) { tbody.innerHTML = '<tr class="loading-row"><td colspan="7">No items found</td></tr>'; return; }
+  tbody.innerHTML = '';
+  filtered.forEach(item => {
+    const tr = document.createElement('tr');
+    const activePrice = getMaterialPrice(item);
+    const upd = item.updated_at ? item.updated_at.split('T')[0] : '—';
+    const linkCell = item.lumen_url
+      ? `<a href="${item.lumen_url}" target="_blank" title="Open in Lumen" style="color:var(--green);font-family:'IBM Plex Mono',monospace;font-size:13px;text-decoration:none;">🔗</a>`
+      : `<span title="No Lumen link" style="color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:13px;">—</span>`;
+    const saleBadge = item.on_sale
+      ? ` <span title="On sale on Lumen" style="background:var(--red);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;padding:2px 5px;border-radius:3px;letter-spacing:0.05em;">SALE</span>`
+      : '';
+    tr.innerHTML = `
+	      <td style="font-weight:500">${item.name}${saleBadge}<div class="price-source">${supplierPriceSummary(item)}</div></td>
+      <td><span class="tcat">${item.category||'—'}</span></td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted)">${item.unit||'each'}</td>
+	      <td><span class="pval">$${activePrice.price.toFixed(2)}</span><button class="pedit" onclick="dbEditPrice(this,'${item.id}')">Edit</button><div class="price-source">${activePrice.supplier_name}</div></td>
+      <td style="text-align:center">${linkCell}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)">${upd}</td>
+      <td><button class="abtn e" onclick='openM(${JSON.stringify(item)})'>✎</button><button class="abtn d" onclick="dbDel('${item.id}',this)">×</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderMobDB() {
+  const container = document.getElementById('mob-dbtbody');
+  if (!container) return;
+  const filtered = getFiltered();
+  container.innerHTML = '';
+  if (!filtered.length) {
+    container.innerHTML = '<div class="mob-empty">No items found</div>';
+  } else {
+    filtered.forEach(item => {
+      const upd = item.updated_at ? item.updated_at.split('T')[0] : '—';
+      const linkBadge = item.lumen_url
+        ? `<span title="Has Lumen link" style="font-size:10px;color:var(--green);">🔗</span>`
+        : `<span title="No link" style="font-size:10px;color:var(--dim);">○</span>`;
+      const saleBadge = item.on_sale
+        ? ` <span title="On sale" style="background:var(--red);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:8px;font-weight:600;padding:1px 4px;border-radius:3px;letter-spacing:0.05em;">SALE</span>`
+        : '';
+	      const activePrice = getMaterialPrice(item);
+	      const card = document.createElement('div');
+      card.className = 'db-card';
+      card.innerHTML = `
+        <div class="db-card-left">
+          <div class="db-card-name">${item.name} ${linkBadge}${saleBadge}</div>
+          <div class="db-card-meta"><span class="tcat">${item.category||'—'}</span><span class="db-card-unit">${item.unit||'each'}</span></div>
+        </div>
+        <div class="db-card-right">
+	          <span class="db-card-price">$${activePrice.price.toFixed(2)}</span>
+	          <div class="price-source">${activePrice.supplier_name}</div>
+          <div class="db-card-btns">
+            <button class="db-card-btn" onclick='openM(${JSON.stringify(item)})'>✎</button>
+            <button class="db-card-btn del" onclick="dbDel('${item.id}',this)">×</button>
+          </div>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+}
+
+async function dbEditPrice(btn, id) {
+  const item = dbItems.find(i => i.id === id);
+  const activePrice = getMaterialPrice(item);
+  const pval = btn.previousElementSibling;
+  const curWithTax = parseFloat(pval.textContent.replace('$','')) || 0;
+  const curPreTax = (curWithTax / (1 + TAX_RATE)).toFixed(2);
+  const inp = document.createElement('input');
+  inp.className = 'qi'; inp.style.cssText = 'width:80px;display:inline-block;';
+  inp.type='number'; inp.step='0.01'; inp.value=curPreTax;
+  inp.title = 'Enter price BEFORE tax';
+  pval.replaceWith(inp); btn.style.display='none';
+  inp.focus(); inp.select();
+  inp.onblur = async () => {
+    const v = parseFloat(inp.value); // pre-tax
+    const newEl = document.createElement('span'); newEl.className='pval';
+    if (!isNaN(v) && v>=0) {
+      const withTax = +(v * (1 + TAX_RATE)).toFixed(4);
+	      let error = null;
+	      if (supplierPricesReady && activePrice.supplier_key) await saveSupplierPrice(id, activePrice.supplier_key, withTax, activePrice.product_url || null, !!activePrice.on_sale);
+	      if (!supplierPricesReady || activePrice.supplier_key === 'lumen') ({ error } = await sb.from(TABLE).update({price:withTax,updated_at:new Date().toISOString()}).eq('id',id));
+      if (!error) { const it=dbItems.find(i=>i.id===id); if(it) it.price=withTax; newEl.textContent='$'+withTax.toFixed(2); toast('✓ Price updated (with tax: $'+withTax.toFixed(2)+')'); }
+      else { newEl.textContent='$'+curWithTax.toFixed(2); toast('⚠ Error saving',true); }
+    } else { newEl.textContent='$'+curWithTax.toFixed(2); }
+    inp.replaceWith(newEl); btn.style.display='';
+  };
+  inp.onkeydown = e => { if(e.key==='Enter') inp.blur(); if(e.key==='Escape'){inp.value=curPreTax;inp.blur();} };
+}
+
+async function dbDel(id, btn) {
+  if (!confirm('Delete this item?')) return;
+  const { error } = await sb.from(TABLE).delete().eq('id',id);
+  if (error) { toast('⚠ Error deleting',true); return; }
+  dbItems = dbItems.filter(i=>i.id!==id);
+  btn.closest('.db-card, tr')?.remove();
+  toast('Item deleted');
+}
+
+// ══ MODAL ══
+function openM(item) {
+  editingId = null;
+  if (item && typeof item==='object') {
+    editingId = item.id;
+    document.getElementById('mtitle').textContent = 'Edit item';
+    document.getElementById('mname').value = item.name||'';
+    document.getElementById('mcat').value = item.category||'';
+    document.getElementById('munit').value = item.unit||'each';
+    // Stored price includes tax — show pre-tax value for editing
+    const preTax = item.price ? (parseFloat(item.price) / (1 + TAX_RATE)) : '';
+    document.getElementById('mprice').value = preTax ? preTax.toFixed(2) : '';
+    document.getElementById('mlumenUrl').value = item.lumen_url || '';
+    const hd = (item.supplier_prices || []).find(p => p.supplier_key === 'home_depot') || {};
+    document.getElementById('mhomeDepotUrl').value = hd.product_url || '';
+    document.getElementById('mhomeDepotPrice').value = hd.price != null
+      ? storedSupplierPriceToTotalPreTax(hd.price, item.category, hd.package_qty, hd.package_unit).toFixed(2)
+      : '';
+    document.getElementById('mhomeDepotSale').checked = !!hd.on_sale;
+    document.getElementById('mhomeDepotQty').value = hd.package_qty || 1;
+    document.getElementById('mhomeDepotUnit').value = hd.package_unit || 'each';
+    const hdRemove = document.getElementById('mhomeDepotRemove');
+    hdRemove.dataset.priceId = hd.id || '';
+    hdRemove.style.display = hd.id ? '' : 'none';
+    renderSupplierRows(item);
+  } else {
+    document.getElementById('mtitle').textContent = item ? 'Add "'+item+'" to database' : 'Add new item';
+    document.getElementById('mname').value = typeof item==='string' ? item : '';
+    document.getElementById('munit').value = 'each';
+    document.getElementById('mprice').value = '';
+    document.getElementById('mlumenUrl').value = '';
+    document.getElementById('mhomeDepotUrl').value = '';
+    document.getElementById('mhomeDepotPrice').value = '';
+    document.getElementById('mhomeDepotSale').checked = false;
+    document.getElementById('mhomeDepotQty').value = 1;
+    document.getElementById('mhomeDepotUnit').value = 'each';
+    document.getElementById('mhomeDepotRemove').dataset.priceId = '';
+    document.getElementById('mhomeDepotRemove').style.display = 'none';
+    renderSupplierRows(null);
+  }
+  updateTaxPreview();
+  document.getElementById('overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('mname').focus(), 50);
+}
+function closeModal() { document.getElementById('overlay').style.display='none'; }
+function closeOverlay(e) { if(e.target===document.getElementById('overlay')) closeModal(); }
+
+function supplierKeyFromName(name) {
+  return (name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'supplier';
+}
+
+function addSupplierRow(data={}) {
+  const box = document.getElementById('supplierRows');
+  if (!box) return;
+  const row = document.createElement('div');
+  row.className = 'supplier-extra-row';
+  row.dataset.priceId = data.id || '';
+  row.style.cssText = 'border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-top:8px;background:var(--surface2);';
+  row.innerHTML = `
+    <div class="supplier-grid">
+      <div>
+        <label class="mlbl" style="margin-top:0;">Supplier</label>
+        <select class="minp sup-preset">
+          <option value="">Custom supplier</option>
+          <option value="city_electric">City Electric</option>
+          <option value="guillevin">Guillevin</option>
+        </select>
+      </div>
+      <div>
+        <label class="mlbl" style="margin-top:0;">Key</label>
+        <input class="minp sup-key" placeholder="supplier_key" value="${data.supplier_key || ''}">
+      </div>
+    </div>
+    <div class="supplier-grid full">
+      <div>
+        <label class="mlbl" style="margin-top:0;">Supplier name</label>
+        <input class="minp sup-name" placeholder="Custom supplier name" value="${data.supplier_name || ''}">
+      </div>
+    </div>
+    <div class="supplier-grid full">
+      <div>
+        <label class="mlbl" style="margin-top:0;">Product URL</label>
+        <input class="minp sup-url" type="url" placeholder="https://..." value="${data.product_url || ''}">
+      </div>
+    </div>
+    <div class="supplier-grid">
+      <div>
+        <label class="mlbl" style="margin-top:0;">Total price before tax ($)</label>
+        <input class="minp sup-price" type="number" step="0.01" min="0" placeholder="optional" value="${data.price != null ? storedSupplierPriceToTotalPreTax(data.price, document.getElementById('mcat').value, data.package_qty, data.package_unit).toFixed(2) : ''}">
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:10px;">
+        <input class="sup-sale" type="checkbox" ${data.on_sale ? 'checked' : ''}> Sale
+      </label>
+    </div>
+    <div class="supplier-grid">
+      <div>
+        <label class="mlbl" style="margin-top:0;">Package quantity</label>
+        <input class="minp sup-qty" type="number" step="0.001" min="0" placeholder="1" value="${data.package_qty || 1}">
+      </div>
+      <div>
+        <label class="mlbl" style="margin-top:0;">Unit</label>
+        <select class="minp sup-unit">
+          <option value="each">each</option><option value="m">m</option><option value="ft">ft</option><option value="box">box</option>
+        </select>
+      </div>
+    </div>
+    <button type="button" class="bo sup-remove" style="margin-top:8px;color:var(--red);border-color:var(--red);">Remove supplier</button>`;
+  box.appendChild(row);
+  row.querySelector('.sup-unit').value = data.package_unit || 'each';
+  const preset = row.querySelector('.sup-preset');
+  if (['city_electric','guillevin'].includes(data.supplier_key)) preset.value = data.supplier_key;
+  preset.addEventListener('change', e => {
+    if (!e.target.value) return;
+    row.querySelector('.sup-key').value = e.target.value;
+    row.querySelector('.sup-name').value = supplierName(e.target.value);
+  });
+  row.querySelector('.sup-name').addEventListener('input', e => {
+    const keyEl = row.querySelector('.sup-key');
+    if (!keyEl.value.trim()) keyEl.value = supplierKeyFromName(e.target.value);
+  });
+  row.querySelector('.sup-remove').addEventListener('click', () => deleteSupplierRow(row));
+}
+
+async function deleteSupplierRow(row) {
+  const id = row.dataset.priceId;
+  if (id && !confirm('Remove this supplier from the item?')) return;
+  if (id) {
+    const { error } = await sb.from(PRICE_TABLE).delete().eq('id', id);
+    if (error) { toast('Supplier not removed: '+error.message, true); return; }
+  }
+  row.remove();
+  toast('Supplier removed');
+}
+
+async function deleteHomeDepotSupplier() {
+  const btn = document.getElementById('mhomeDepotRemove');
+  const id = btn.dataset.priceId;
+  if (id && !confirm('Remove Home Depot from the item?')) return;
+  if (id) {
+    const { error } = await sb.from(PRICE_TABLE).delete().eq('id', id);
+    if (error) { toast('Home Depot not removed: '+error.message, true); return; }
+  }
+  ['mhomeDepotUrl','mhomeDepotPrice'].forEach(x => document.getElementById(x).value = '');
+  document.getElementById('mhomeDepotQty').value = 1;
+  document.getElementById('mhomeDepotUnit').value = 'each';
+  document.getElementById('mhomeDepotSale').checked = false;
+  btn.dataset.priceId = '';
+  btn.style.display = 'none';
+  toast('Home Depot removed');
+}
+
+function renderSupplierRows(item) {
+  const box = document.getElementById('supplierRows');
+  if (!box) return;
+  box.innerHTML = '';
+  (item?.supplier_prices || [])
+    .filter(p => !['lumen','home_depot'].includes(p.supplier_key))
+    .forEach(p => addSupplierRow(p));
+}
+
+function updateTaxPreview() {
+  const v = parseFloat(document.getElementById('mprice').value);
+  const withTax = (!isNaN(v) && v >= 0) ? v * (1 + TAX_RATE) : 0;
+  document.querySelector('#taxPreview span').textContent = '$' + withTax.toFixed(2);
+}
+
+async function saveSupplierPrice(materialId, supplierKey, price, productUrl, onSale=false, packageQty=1, packageUnit='each', supplierNameOverride='') {
+  if (!materialId) return false;
+  if (price == null && !productUrl) return true;
+  const payload = {
+    material_id: materialId,
+    supplier_key: supplierKey,
+    supplier_name: supplierNameOverride || supplierName(supplierKey),
+    price,
+    product_url: productUrl,
+    package_qty: packageQty || 1,
+    package_unit: packageUnit || 'each',
+    on_sale: !!onSale,
+    available: price != null,
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await sb.from(PRICE_TABLE).upsert(payload, { onConflict:'material_id,supplier_key' });
+  if (error) { toast('Supplier price not saved: '+error.message, true); return false; }
+  supplierPricesReady = true;
+  return true;
+}
+
+
+function normalizeSupplierPriceBeforeTax(totalPrice, category, packageQty, packageUnit) {
+  let qty = parseFloat(packageQty);
+  if (!(qty > 0)) qty = 1;
+  const unit = (packageUnit || 'each').toLowerCase();
+  const cat = (category || '').toLowerCase();
+  if ((cat === 'wire' || cat === 'conduit') && qty > 0) {
+    if (unit === 'm') return totalPrice / qty;
+    if (unit === 'ft') return totalPrice / (qty / M_TO_FT);
+  }
+  if (qty > 1 && unit !== 'm' && unit !== 'ft') return totalPrice / qty;
+  return totalPrice;
+}
+
+function storedSupplierPriceToTotalPreTax(storedPrice, category, packageQty, packageUnit) {
+  let qty = parseFloat(packageQty);
+  if (!(qty > 0)) qty = 1;
+  const unit = (packageUnit || 'each').toLowerCase();
+  const cat = (category || '').toLowerCase();
+  const basePreTax = (parseFloat(storedPrice) || 0) / (1 + TAX_RATE);
+  if (cat === 'wire' || cat === 'conduit') {
+    if (unit === 'm') return basePreTax * qty;
+    if (unit === 'ft') return basePreTax * (qty / M_TO_FT);
+  }
+  if (qty > 1 && unit !== 'm' && unit !== 'ft') return basePreTax * qty;
+  return basePreTax;
+}
+
+async function saveItem() {
+  const name=document.getElementById('mname').value.trim();
+  const cat=document.getElementById('mcat').value;
+  const unit=document.getElementById('munit').value;
+  const priceBeforeTax=parseFloat(document.getElementById('mprice').value);
+  const lumenUrl=document.getElementById('mlumenUrl').value.trim() || null;
+  const homeDepotUrl=document.getElementById('mhomeDepotUrl').value.trim() || null;
+  const homeDepotPriceBeforeTax=parseFloat(document.getElementById('mhomeDepotPrice').value);
+  const homeDepotSale=document.getElementById('mhomeDepotSale').checked;
+  const homeDepotQty=parseFloat(document.getElementById('mhomeDepotQty').value) || 1;
+  const homeDepotUnit=document.getElementById('mhomeDepotUnit').value || 'each';
+  if (!name) { toast('⚠ Enter item name',true); return; }
+  if (isNaN(priceBeforeTax)||priceBeforeTax<0) { toast('⚠ Enter valid price',true); return; }
+  if (lumenUrl && !/^https?:\/\//i.test(lumenUrl)) { toast('⚠ URL must start with https://',true); return; }
+  if (homeDepotUrl && !/^https?:\/\//i.test(homeDepotUrl)) { toast('Home Depot URL must start with https://',true); return; }
+  // Store price WITH tax in database
+  const price = +(priceBeforeTax * (1 + TAX_RATE)).toFixed(4);
+  const btn=document.getElementById('msave');
+  btn.disabled=true; btn.textContent='Saving…';
+  const payload={name,category:cat,unit,price,lumen_url:lumenUrl,updated_at:new Date().toISOString()};
+  let error, savedItem;
+  if (editingId) {
+    const res = await sb.from(TABLE).update(payload).eq('id',editingId).select('id').single();
+    error = res.error; savedItem = res.data || { id: editingId };
+  } else {
+    const res = await sb.from(TABLE).insert([payload]).select('id').single();
+    error = res.error; savedItem = res.data;
+  }
+  btn.disabled=false; btn.textContent='Save to database';
+  if (error) { toast('⚠ Error: '+error.message,true); return; }
+  closeModal(); toast('✓ '+(editingId?'Updated':'Added')+' "'+name+'" (with tax: $'+price.toFixed(2)+')');
+  const materialId = savedItem?.id || editingId;
+  let supplierSaveOk = await saveSupplierPrice(materialId, 'lumen', price, lumenUrl, false);
+  if (homeDepotUrl || !isNaN(homeDepotPriceBeforeTax)) {
+    const homeDepotBasePreTax = !isNaN(homeDepotPriceBeforeTax)
+      ? normalizeSupplierPriceBeforeTax(homeDepotPriceBeforeTax, cat, homeDepotQty, homeDepotUnit)
+      : null;
+    const homeDepotPrice = homeDepotBasePreTax != null ? +(homeDepotBasePreTax * (1 + TAX_RATE)).toFixed(4) : null;
+    supplierSaveOk = (await saveSupplierPrice(materialId, 'home_depot', homeDepotPrice, homeDepotUrl, homeDepotSale, homeDepotQty, homeDepotUnit)) && supplierSaveOk;
+  }
+  for (const row of document.querySelectorAll('#supplierRows .supplier-extra-row')) {
+    const supName = row.querySelector('.sup-name').value.trim();
+    const supKey = (row.querySelector('.sup-key').value.trim() || supplierKeyFromName(supName));
+    const supUrl = row.querySelector('.sup-url').value.trim() || null;
+    const supTotal = parseFloat(row.querySelector('.sup-price').value);
+    const supSale = row.querySelector('.sup-sale').checked;
+    const supQty = parseFloat(row.querySelector('.sup-qty').value) || 1;
+    const supUnit = row.querySelector('.sup-unit').value || 'each';
+    if (!supName && !supUrl && isNaN(supTotal)) continue;
+    if (supUrl && !/^https?:\/\//i.test(supUrl)) { toast('Supplier URL must start with https://', true); continue; }
+    const supBasePreTax = !isNaN(supTotal) ? normalizeSupplierPriceBeforeTax(supTotal, cat, supQty, supUnit) : null;
+    const supPrice = supBasePreTax != null ? +(supBasePreTax * (1 + TAX_RATE)).toFixed(4) : null;
+    supplierSaveOk = (await saveSupplierPrice(materialId, supKey, supPrice, supUrl, supSale, supQty, supUnit, supName)) && supplierSaveOk;
+  }
+  await loadDB();
+  if (!supplierSaveOk) toast('Item saved, but one or more supplier prices failed', true);
+}
+
+// ══ CALCULATOR STATE ══
+let orders=[], selItem=null, curPct=40;
+const WIRE=new Set(['Wire','Conduit']);
+const M_TO_FT = 3.28084; // 1 meter = 3.28084 feet; price-per-ft = price-per-m / M_TO_FT
+
+// ══ NAVIGATION ══
+function deskSw(name, el) {
+  document.querySelectorAll('.desk-nav .desk-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.page').forEach(p=>{if(p.id.startsWith('desk-'))p.classList.remove('on');});
+  document.getElementById('desk-'+name).classList.add('on');
+  el.classList.add('on');
+}
+function mobSw(name, el) {
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.page').forEach(p=>{if(p.id.startsWith('mob-'))p.classList.remove('on');});
+  document.getElementById('mob-'+name).classList.add('on');
+  el.classList.add('on');
+}
+
+// ══ UNITS ══
+function setU(btn, mode) {
+  const selector = mode==='mob' ? '.mob-ubtn' : '.ubtn';
+  document.querySelectorAll(selector).forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  // Keep desktop and mobile unit toggles in sync (the unit is a global concept for new items)
+  const newUnit = btn.textContent === 'Meters' ? 'm' : 'ft';
+  const otherSel = mode==='mob' ? '.ubtn' : '.mob-ubtn';
+  document.querySelectorAll(otherSel).forEach(b => {
+    const isThis = (b.textContent === 'Meters' && newUnit === 'm') || (b.textContent === 'Feet' && newUnit === 'ft');
+    b.classList.toggle('on', isThis);
+  });
+  // Note: do NOT change existing orders — the toggle only affects items added next.
+}
+function getUnit(mode) {
+  const sel = mode==='mob' ? '.mob-ubtn.on' : '.ubtn.on';
+  const el = document.querySelector(sel);
+  return el && el.textContent==='Meters' ? 'm' : 'ft';
+}
+
+// ══ SEARCH ══
+function doSearch(v, mode) {
+  const dropId = mode==='mob' ? 'mob-drop' : 'drop';
+  const drop = document.getElementById(dropId);
+  const errId = mode==='mob' ? 'mob-addErr' : 'addErr';
+  document.getElementById(errId).textContent='';
+  if (v.length<2) { drop.style.display='none'; return; }
+  const matches = dbItems.filter(i=>i.name.toLowerCase().includes(v.toLowerCase())).slice(0,7);
+  drop.innerHTML='';
+  matches.forEach(i=>{
+    const d=document.createElement('div');
+    d.className=mode==='mob'?'mob-ditem':'ditem';
+    const selectedPrice = getMaterialPrice(i);
+    const priceText = selectedPrice.unavailable ? 'Not available' : '$'+parseFloat(selectedPrice.price).toFixed(2);
+    d.innerHTML=mode==='mob'
+      ?`<span class="mob-dname">${i.name}</span><span class="mob-dprice">${priceText}</span>`
+      :`<span class="dname">${i.name}</span><div class="dmeta"><span class="dcat-s">${i.category}</span><span class="dprice">${priceText}</span></div>`;
+    d.onclick=()=>pick(i,mode);
+    drop.appendChild(d);
+  });
+  const newRow=document.createElement('div');
+  newRow.className=mode==='mob'?'mob-dnew':'dnew';
+  newRow.innerHTML=mode==='mob'
+    ?`<span class="mob-dnew-t">Add "${v}" to database</span><span class="dnew-b">NEW</span>`
+    :`<span class="dnew-t">Add "${v}" to database</span><span class="dnew-b">NEW</span>`;
+  newRow.onclick=()=>{ closeDrop(mode); openM(v); };
+  drop.appendChild(newRow);
+  drop.style.display='block';
+}
+
+function pick(item, mode) {
+  selItem=item;
+  const inpId=mode==='mob'?'mob-srch':'srch';
+  document.getElementById(inpId).value=item.name;
+  closeDrop(mode);
+  setStores(item.name);
+}
+
+function closeDrop(mode) {
+  const id=mode==='mob'?'mob-drop':'drop';
+  document.getElementById(id).style.display='none';
+}
+
+document.addEventListener('click', e=>{
+  if (!e.target.closest('.sidebar') && !e.target.closest('.mob-add-form')) {
+    document.getElementById('drop').style.display='none';
+    document.getElementById('mob-drop').style.display='none';
+  }
+});
+
+// ══ ADD ITEM ══
+function addItem(mode) {
+  const inpId=mode==='mob'?'mob-srch':'srch';
+  const qtyId=mode==='mob'?'mob-qty':'qty';
+  const errId=mode==='mob'?'mob-addErr':'addErr';
+  const name=document.getElementById(inpId).value.trim();
+  const qty=parseFloat(document.getElementById(qtyId).value);
+  const err=document.getElementById(errId);
+  err.textContent='';
+  if (!name) { err.textContent='⚠ Enter an item name'; return; }
+  if (!(qty>0)) { err.textContent='⚠ Enter a valid quantity'; return; }
+  const dbItem=selItem&&selItem.name===name?selItem:dbItems.find(i=>i.name.toLowerCase()===name.toLowerCase());
+  const pickedPrice = getMaterialPrice(dbItem);
+  if (dbItem && pickedPrice.unavailable) {
+    err.textContent = 'No price from '+supplierName(pricingMode)+' for this item';
+    return;
+  }
+  const pricePerMeter=dbItem?parseFloat(pickedPrice.price):0;  // stored price IS per meter for wire/conduit
+  const cat=dbItem?dbItem.category:'—';
+  const isWire=WIRE.has(cat);
+  const onSale=!!(pickedPrice && pickedPrice.on_sale);
+  const supplierNameUsed=pickedPrice.supplier_name || 'Supplier';
+  const supplierKeyUsed=pickedPrice.supplier_key || '';
+  const productUrlUsed=pickedPrice.product_url || '';
+  // The unit chosen NOW applies to this item only (frozen on this row).
+  const unit = isWire ? getUnit(mode) : 'each';
+  const price = isWire && unit === 'ft' ? pricePerMeter / M_TO_FT : pricePerMeter;
+  // Merge with existing row only if SAME item AND SAME unit (so "10 ft cable" and "20 m cable" stay separate)
+	  const ex = orders.find(o =>
+	    o.name.toLowerCase() === name.toLowerCase() &&
+	    (o.unit || 'each') === unit &&
+	    (o.supplierKey || '') === supplierKeyUsed
+	  );
+	  if (ex) {
+	    ex.qty = +(ex.qty + qty).toFixed(3);
+	    ex.sub = +(ex.price * ex.qty).toFixed(2);
+	    ex.onSale = onSale; // refresh in case it changed
+	    ex.supplierName = supplierNameUsed;
+	    ex.supplierKey = supplierKeyUsed;
+	    ex.productUrl = productUrlUsed;
+	  } else {
+    orders.push({
+      materialId: dbItem ? dbItem.id : null,
+      name: dbItem?dbItem.name:name,
+      cat, qty,
+      pricePerMeter,
+      price: +price.toFixed(4),
+      sub: +(price*qty).toFixed(2),
+      isWire,
+      unit,        // frozen per-row: 'm', 'ft', or 'each'
+	      onSale,
+	      supplierName: supplierNameUsed,
+	      supplierKey: supplierKeyUsed,
+	      productUrl: productUrlUsed
+	    });
+  }
+  renderTable(); renderMobOrders();
+  document.getElementById(inpId).value='';
+  document.getElementById(qtyId).value=1;
+  selItem=null; closeDrop(mode);
+  toast('✓ '+name+' added');
+}
+
+// ══ RENDER DESKTOP TABLE ══
+function renderTable() {
+  const tbody=document.getElementById('tbody');
+  if (!orders.length) {
+    tbody.innerHTML='<tr><td colspan="6" class="empty">No items yet — search and add from the left panel</td></tr>';
+    document.getElementById('countLbl').textContent='Order list — 0 items';
+    recalc(0,'desk'); return;
+  }
+  document.getElementById('countLbl').textContent='Order list — '+orders.length+' item'+(orders.length!==1?'s':'');
+  tbody.innerHTML=''; let total=0;
+  orders.forEach((o,i)=>{
+    total+=o.sub;
+    const rowUnit = o.unit || (o.isWire ? 'm' : 'each');
+    const qtyDisplay = o.isWire ? `${o.qty} ${rowUnit}` : `${o.qty}`;
+    const priceDisplay = o.isWire ? `$${o.price.toFixed(2)}/${rowUnit}` : `$${o.price.toFixed(2)}`;
+    const saleBadge = o.onSale
+      ? ` <span title="On sale" style="background:var(--red);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;padding:2px 5px;border-radius:3px;letter-spacing:0.05em;vertical-align:middle;">SALE</span>`
+      : '';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="tname" title="Click to search in stores">${o.name}${saleBadge}<div class="price-source">${o.supplierName || ''}</div></td>
+      <td><span class="tcat">${o.cat}</span></td>
+      <td class="tnum">${qtyDisplay}</td>
+      <td class="tprice" title="Click to edit">${priceDisplay}</td>
+      <td class="tsub">$${o.sub.toFixed(2)}</td>
+      <td class="tdel"><button class="xbtn">×</button></td>`;
+    tr.querySelector('.tname').addEventListener('click',()=>setStores(o.name));
+    tr.querySelector('.tprice').addEventListener('click',function(){editCell(this,i);});
+    tr.querySelector('.xbtn').addEventListener('click',()=>{orders.splice(i,1);renderTable();renderMobOrders();toast('Item removed');});
+    tbody.appendChild(tr);
+  });
+  recalc(total,'desk');
+}
+
+// ══ RENDER MOBILE ORDERS ══
+function renderMobOrders() {
+  const container=document.getElementById('mob-orders');
+  const totalSec=container.querySelector('.mob-total-section');
+  // Clear order cards only
+  [...container.children].forEach(c=>{ if(c.classList.contains('order-card')||c.classList.contains('mob-empty')) c.remove(); });
+  const empty=document.getElementById('mob-empty');
+  if (!orders.length) {
+    if (empty) empty.style.display='block';
+    recalc(0,'mob'); return;
+  }
+  if (empty) empty.style.display='none';
+  let total=0;
+  orders.forEach((o,i)=>{
+    total+=o.sub;
+    const rowUnit = o.unit || (o.isWire ? 'm' : 'each');
+    const qtyDisplay = o.isWire ? `${o.qty} ${rowUnit}` : `${o.qty}`;
+    const priceDisplay = o.isWire ? `$${o.price.toFixed(2)}/${rowUnit}` : `$${o.price.toFixed(2)}`;
+    const saleBadge = o.onSale
+      ? ` <span title="On sale" style="background:var(--red);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:8px;font-weight:600;padding:1px 4px;border-radius:3px;letter-spacing:0.05em;vertical-align:middle;">SALE</span>`
+      : '';
+    const card=document.createElement('div');
+    card.className='order-card';
+    card.innerHTML=`
+      <div class="order-left">
+        <div class="order-name" title="Tap to search stores">${o.name}${saleBadge}</div>
+        <div class="price-source">${o.supplierName || ''}</div>
+        <div class="order-meta"><span class="tcat">${o.cat}</span><span class="order-qty">${qtyDisplay}</span></div>
+      </div>
+      <div class="order-right">
+        <span class="order-price">${priceDisplay}</span>
+        <span class="order-sub">$${o.sub.toFixed(2)}</span>
+      </div>
+      <button class="order-del">×</button>`;
+    card.querySelector('.order-name').addEventListener('click',()=>{ setStores(o.name); mobSw('stores',document.querySelector('.bnav-item:nth-child(3)')); });
+    card.querySelector('.order-del').addEventListener('click',()=>{ orders.splice(i,1); renderTable(); renderMobOrders(); toast('Item removed'); });
+    container.insertBefore(card, container.querySelector('.mob-total-section'));
+  });
+  recalc(total,'mob');
+}
+
+function editCell(cell,idx) {
+  const cur=orders[idx].price;
+  const inp=document.createElement('input');
+  inp.className='qi'; inp.style.cssText='width:70px;display:inline-block;';
+  inp.type='number'; inp.step='0.01'; inp.min='0'; inp.value=cur.toFixed(2);
+  cell.textContent=''; cell.appendChild(inp); inp.focus(); inp.select();
+  const commit=()=>{
+    const v=parseFloat(inp.value);
+    if(!isNaN(v)&&v>=0){
+      const o = orders[idx];
+      o.price=+v.toFixed(4);
+      // If wire/conduit, also update the base per-meter price so unit-switch keeps working
+      if (o.isWire) {
+        const unit = getUnit('desk');
+        o.pricePerMeter = unit === 'ft' ? o.price * M_TO_FT : o.price;
+      }
+      o.sub=+(o.price*o.qty).toFixed(2);
+    }
+    renderTable();renderMobOrders();
+  };
+  inp.addEventListener('blur',commit);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape')renderTable();});
+}
+
+// ══ TOTALS & PROFIT ══
+function recalc(total,mode) {
+  if (mode==='desk') {
+    document.getElementById('totalV').textContent='$'+total.toFixed(2);
+    const p=total*curPct/100;
+    document.getElementById('pCost').textContent='$'+total.toFixed(2);
+    document.getElementById('pProfit').textContent='+$'+p.toFixed(2);
+    document.getElementById('pClient').textContent='$'+(total+p).toFixed(2);
+  } else {
+    document.getElementById('mob-totalV').textContent='$'+total.toFixed(2);
+    const p=total*curPct/100;
+    document.getElementById('mob-pCost').textContent='$'+total.toFixed(2);
+    document.getElementById('mob-pProfit').textContent='+$'+p.toFixed(2);
+    document.getElementById('mob-pClient').textContent='$'+(total+p).toFixed(2);
+  }
+}
+
+function setPct(pct,btn) {
+  curPct=pct;
+  document.querySelectorAll('.pctbtn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  document.querySelector('.pct-inp').value='';
+  const cost=parseFloat(document.getElementById('totalV').textContent.replace('$',''))||0;
+  recalc(cost,'desk');
+  if (genMode==='client') { buildOutput('desk'); buildOutput('mob'); }
+}
+function setPctV(v) { const p=parseFloat(v); if(!isNaN(p)&&p>0){curPct=p;document.querySelectorAll('.pctbtn').forEach(b=>b.classList.remove('on'));const cost=parseFloat(document.getElementById('totalV').textContent.replace('$',''))||0;recalc(cost,'desk');} }
+
+function mobSetPct(pct,btn) {
+  curPct=pct;
+  document.querySelectorAll('.mob-pctbtn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  document.querySelector('.mob-pct-custom').value='';
+  const cost=parseFloat(document.getElementById('mob-totalV').textContent.replace('$',''))||0;
+  recalc(cost,'mob');
+  if (genMode==='client') { buildOutput('desk'); buildOutput('mob'); }
+}
+function mobSetPctV(v) { const p=parseFloat(v); if(!isNaN(p)&&p>0){curPct=p;document.querySelectorAll('.mob-pctbtn').forEach(b=>b.classList.remove('on'));const cost=parseFloat(document.getElementById('mob-totalV').textContent.replace('$',''))||0;recalc(cost,'mob');} }
+
+// ══ STORES ══
+// Default built-in stores. Use {q} as placeholder for the search term.
+const DEFAULT_STORES = [
+  { key:'hd',    name:'Home Depot',    domain:'homedepot.ca',    abbr:'HD', color:'#f96302', url:'https://www.homedepot.ca/search?q={q}#!q={q}' },
+  { key:'rona',  name:'Rona',          domain:'rona.ca',         abbr:'RO', color:'#e8453c', url:'https://www.rona.ca/webapp/wcs/stores/servlet/RonaAjaxCatalogSearchView?urlLangId=-1&catalogId=10051&searchKey=RonaEN&langId=-1&storeId=10151&keywords={q}' },
+  { key:'guil',  name:'Guillevin',     domain:'guillevin.com',   abbr:'GV', color:'#e8a030', url:'https://www.guillevin.com/search?q={q}&perPage=12&sortCriteria=relevance' },
+  { key:'hh',    name:'Home Hardware', domain:'homehardware.ca', abbr:'HH', color:'#c8272d', url:'https://www.homehardware.ca/en/electrical-wire/c/1525535423339?query={q}' },
+  { key:'lumen', name:'Lumen',         domain:'lumen.ca',        abbr:'LU', color:'#0aa3c2', url:'https://www.lumen.ca/en/search/?q={q}' },
+  { key:'wesco', name:'Wesco',         domain:'wesco.ca',        abbr:'WE', color:'#d81e2c', url:'https://buy.wesco.ca/fsearch?catPath=Wire-and-Cable&searchterm={q}' },
+  { key:'frank', name:'Franklin Empire', domain:'franklinempire.com', abbr:'FE', color:'#1a5fa8', url:'https://franklinempire.com/search?q={q}' },
+  { key:'westb', name:'Westburne',     domain:'westburne.ca',    abbr:'WB', color:'#e87722', url:'https://www.westburne.ca/cwr/search?text={q}' }
+];
+
+const STORE_COLORS = ['#5b9cf6','#4caf7d','#e8a030','#c264d4','#e8453c','#0aa3c2','#f96302','#9c8cf0'];
+
+function getCustomStores() { try { return JSON.parse(localStorage.getItem('customStores')||'[]'); } catch { return []; } }
+function saveCustomStores(arr) { try { localStorage.setItem('customStores', JSON.stringify(arr)); } catch {} }
+function getHiddenStores() { try { return JSON.parse(localStorage.getItem('hiddenStores')||'[]'); } catch { return []; } }
+function saveHiddenStores(arr) { try { localStorage.setItem('hiddenStores', JSON.stringify(arr)); } catch {} }
+
+// Combined active store list
+function getStores() {
+  const hidden = getHiddenStores();
+  const defaults = DEFAULT_STORES.filter(s => !hidden.includes(s.key));
+  return [...defaults, ...getCustomStores()];
+}
+
+// Convert a pasted search URL into a template.
+// Replaces the literal "wire" (the term the user searched) with {q}.
+function urlToTemplate(url, searchTerm) {
+  const term = searchTerm || 'wire';
+  // Replace both raw and url-encoded versions of the term
+  let tpl = url.split(term).join('{q}');
+  // If nothing was replaced, try case-insensitive
+  if (!tpl.includes('{q}')) {
+    const re = new RegExp(term, 'i');
+    tpl = url.replace(re, '{q}');
+  }
+  return tpl;
+}
+
+function addStore() {
+  const url = prompt('Go to the store website, search for "wire", then paste the full URL here:');
+  if (!url || !url.trim()) return;
+  let cleanUrl = url.trim();
+  if (!/^https?:\/\//i.test(cleanUrl)) { toast('⚠ Paste a full URL (https://…)', true); return; }
+  if (!/wire/i.test(cleanUrl)) {
+    if (!confirm('The URL doesn\'t contain "wire". The search term won\'t be replaceable. Continue anyway?')) return;
+  }
+  let domain = '';
+  try { domain = new URL(cleanUrl).hostname.replace(/^www\./,''); } catch { domain = 'store'; }
+  const name = prompt('Store name:', domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1));
+  if (!name || !name.trim()) return;
+  const tpl = urlToTemplate(cleanUrl, 'wire');
+  const custom = getCustomStores();
+  const key = 'cust_' + Date.now();
+  const abbr = name.trim().slice(0,2).toUpperCase();
+  const color = STORE_COLORS[custom.length % STORE_COLORS.length];
+  custom.push({ key, name:name.trim(), domain, abbr, color, url:tpl, custom:true });
+  saveCustomStores(custom);
+  buildStoreLists();
+  renderStoreManager();
+  toast('✓ Store "'+name.trim()+'" added');
+}
+
+function removeStore(key) {
+  if (!confirm('Remove this store from the list?')) return;
+  if (key.startsWith('cust_')) {
+    saveCustomStores(getCustomStores().filter(s => s.key !== key));
+  } else {
+    const hidden = getHiddenStores();
+    if (!hidden.includes(key)) hidden.push(key);
+    saveHiddenStores(hidden);
+  }
+  buildStoreLists();
+  renderStoreManager();
+  toast('Store removed');
+}
+
+function restoreStore(key) {
+  saveHiddenStores(getHiddenStores().filter(k => k !== key));
+  buildStoreLists();
+  renderStoreManager();
+  toast('Store restored');
+}
+
+function buildStoreLists() {
+  const stores = getStores();
+  const desk = document.getElementById('deskStoresList');
+  const mob = document.getElementById('mobStoresList');
+  if (desk) {
+    desk.innerHTML = '';
+    stores.forEach(s => {
+      const a = document.createElement('a');
+      a.href = '#'; a.target = '_blank'; a.className = 'scard'; a.id = 'store-'+s.key;
+      a.innerHTML = `<div class="scard-top"><div><div class="sname" style="color:${s.color}">${s.name}</div><div class="sdomain">${s.domain}</div></div><div class="sarrow">→</div></div>`;
+      desk.appendChild(a);
+    });
+  }
+  if (mob) {
+    mob.innerHTML = '';
+    stores.forEach(s => {
+      const a = document.createElement('a');
+      a.href = '#'; a.target = '_blank'; a.className = 'mob-store-card'; a.id = 'mob-store-'+s.key;
+      a.innerHTML = `<div class="mob-store-l"><div class="mob-store-icon" style="background:${hexToRgba(s.color,0.15)};color:${s.color}">${s.abbr}</div><div><div class="mob-store-name" style="color:${s.color}">${s.name}</div><div class="mob-store-domain">${s.domain}</div></div></div><span class="mob-store-arrow">→</span>`;
+      mob.appendChild(a);
+    });
+  }
+  // Re-apply current search term if any
+  if (lastSearchedItem) setStores(lastSearchedItem);
+}
+
+// Render the manager list (in settings / modal)
+function renderStoreManager() {
+  const containers = [document.getElementById('storeManagerList'), document.getElementById('mob-storeManagerList')];
+  const active = getStores();
+  const hidden = DEFAULT_STORES.filter(s => getHiddenStores().includes(s.key));
+  containers.forEach(c => {
+    if (!c) return;
+    c.innerHTML = '';
+    active.forEach(s => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);';
+      row.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;border-radius:5px;background:${hexToRgba(s.color,0.15)};color:${s.color};font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">${s.abbr}</span><span style="font-size:13px;">${s.name}</span></div>
+        <button onclick="removeStore('${s.key}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:2px 8px;">×</button>`;
+      c.appendChild(row);
+    });
+    hidden.forEach(s => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);opacity:.5;';
+      row.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;text-decoration:line-through;">${s.name}</span></div>
+        <button onclick="restoreStore('${s.key}')" style="background:none;border:none;color:var(--green);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:2px 8px;">Restore</button>`;
+      c.appendChild(row);
+    });
+  });
+}
+
+function hexToRgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+
+function openStoreManager() {
+  renderStoreManager();
+  document.getElementById('storeOverlay').style.display = 'flex';
+}
+function closeStoreManagerBtn() { document.getElementById('storeOverlay').style.display = 'none'; }
+function closeStoreManager(e) { if (e.target === document.getElementById('storeOverlay')) closeStoreManagerBtn(); }
+
+let lastSearchedItem = '';
+function setStores(name) {
+  lastSearchedItem = name;
+  const q = encodeURIComponent(name);
+  // Look up this item in the DB to check if it has a direct lumen_url
+  const dbItem = dbItems.find(i => i.name.toLowerCase() === name.toLowerCase());
+  const directLumenUrl = dbItem && dbItem.lumen_url ? dbItem.lumen_url : null;
+  const directHomeDepotUrl = dbItem && dbItem.supplier_prices
+    ? (dbItem.supplier_prices.find(p => p.supplier_key === 'home_depot') || {}).product_url
+    : null;
+
+  const searchEl = document.getElementById('searchingEl');
+  const mobSearchEl = document.getElementById('mob-searchingEl');
+  if (searchEl) searchEl.textContent = name + (directLumenUrl ? ' 🔗' : '');
+  if (mobSearchEl) mobSearchEl.textContent = name + (directLumenUrl ? ' 🔗' : '');
+
+  getStores().forEach(s => {
+    // For Lumen specifically — if the item has a direct product URL, use it instead of search
+    let url;
+    if (s.key === 'lumen' && directLumenUrl) {
+      url = directLumenUrl;
+    } else if (s.key === 'hd' && directHomeDepotUrl) {
+      url = directHomeDepotUrl;
+    } else {
+      url = s.url.replace(/\{q\}/g, q);
+    }
+    const d = document.getElementById('store-'+s.key);
+    const m = document.getElementById('mob-store-'+s.key);
+    if (d) d.href = url;
+    if (m) m.href = url;
+  });
+}
+
+// ══ GENERATE ══
+let genMode = 'cost'; // 'cost' or 'client'
+let lastGenUnit = 'm';
+
+function clearAll() { orders=[]; renderTable(); renderMobOrders(); document.getElementById('outSec').style.display='none'; document.getElementById('mob-out').style.display='none'; }
+
+function setGenMode(m) {
+  genMode = m;
+  // Update desktop buttons
+  const dc=document.getElementById('genCostBtn'), dcl=document.getElementById('genClientBtn');
+  if (dc&&dcl) {
+    dc.style.background = m==='cost'?'var(--accent)':'transparent';
+    dc.style.color = m==='cost'?'#fff':'var(--muted)';
+    dcl.style.background = m==='client'?'var(--accent)':'transparent';
+    dcl.style.color = m==='client'?'#fff':'var(--muted)';
+  }
+  // Update mobile buttons
+  const mc=document.getElementById('mob-genCostBtn'), mcl=document.getElementById('mob-genClientBtn');
+  if (mc&&mcl) {
+    mc.style.background = m==='cost'?'var(--accent)':'transparent';
+    mc.style.color = m==='cost'?'#fff':'var(--muted)';
+    mcl.style.background = m==='client'?'var(--accent)':'transparent';
+    mcl.style.color = m==='client'?'#fff':'var(--muted)';
+  }
+  // Regenerate both visible outputs
+  buildOutput('desk'); buildOutput('mob');
+}
+
+function buildOutput(mode) {
+  if (!orders.length) return;
+  let out='',total=0;
+  orders.forEach(o=>{
+    const rowUnit = o.unit || (o.isWire ? 'm' : 'each');
+    out += o.qty + (o.isWire ? ' ' + rowUnit : '') + ' - ' + o.name + '\n';
+    total += o.sub;
+  });
+  if (genMode==='client') {
+    const client = total * (1 + curPct/100);
+    out+='\nCost of above material '+client.toFixed(2)+'$';
+  } else {
+    out+='\nCost of above material '+total.toFixed(2)+'$';
+  }
+  const id = mode==='mob'?'mob-outPre':'outPre';
+  const el = document.getElementById(id);
+  if (el) el.textContent = out;
+}
+
+const BUY_SUPPLIERS = [
+  { key:'lumen', name:'Lumen' },
+  { key:'guillevin', name:'Guillevin' },
+  { key:'city_electric', name:'City Electric' },
+  { key:'home_depot', name:'Home Depot' }
+];
+
+function getOrderMaterial(order) {
+  return order.materialId
+    ? dbItems.find(i => i.id === order.materialId)
+    : dbItems.find(i => i.name.toLowerCase() === order.name.toLowerCase());
+}
+
+function getOrderPriceForSupplier(order, supplierKey) {
+  const item = getOrderMaterial(order);
+  if (!item) return null;
+  const p = activeSupplierPrices(item).find(x => x.supplier_key === supplierKey);
+  if (!p || !(p.price >= 0)) return null;
+  const base = parseFloat(p.price) || 0;
+  const price = order.isWire && order.unit === 'ft' ? base / M_TO_FT : base;
+  return {
+    supplierKey,
+    supplierName: p.supplier_name || supplierName(supplierKey),
+    price: +price.toFixed(4),
+    sub: +(price * order.qty).toFixed(2),
+    productUrl: p.product_url || ''
+  };
+}
+
+function getBestOrderPrice(order) {
+  const item = getOrderMaterial(order);
+  if (!item) return null;
+  const choices = activeSupplierPrices(item)
+    .map(p => getOrderPriceForSupplier(order, p.supplier_key))
+    .filter(Boolean)
+    .sort((a,b) => a.sub - b.sub);
+  return choices[0] || null;
+}
+
+function buildBuyOptionForSupplier(supplier) {
+  const lines = [];
+  const missing = [];
+  const fallback = [];
+  let supplierTotal = 0;
+  let fallbackTotal = 0;
+  let available = 0;
+
+  orders.forEach(o => {
+    const direct = getOrderPriceForSupplier(o, supplier.key);
+    const rowUnit = o.unit || (o.isWire ? 'm' : 'each');
+    if (direct) {
+      available++;
+      supplierTotal += direct.sub;
+      lines.push({ order:o, price:direct, fallback:false, unit:rowUnit });
+    } else {
+      missing.push(o);
+      const best = getBestOrderPrice(o);
+      if (best) {
+        fallbackTotal += best.sub;
+        fallback.push({ order:o, price:best, fallback:true, unit:rowUnit });
+      }
+    }
+  });
+
+  return {
+    supplier,
+    available,
+    totalItems: orders.length,
+    supplierTotal,
+    fallbackTotal,
+    grandTotal: supplierTotal + fallbackTotal,
+    lines,
+    missing,
+    fallback
+  };
+}
+
+function buildBuyOptionsText() {
+  const options = BUY_SUPPLIERS.map(buildBuyOptionForSupplier);
+  const complete = options
+    .filter(opt => opt.available === opt.totalItems)
+    .sort((a,b) => a.supplierTotal - b.supplierTotal);
+  const closest = options.slice().sort((a,b) =>
+    (b.available - a.available) || (a.supplierTotal - b.supplierTotal)
+  )[0];
+  const bestOneStore = complete[0] || null;
+
+  let out = 'BUY IN ONE STORE\n\n';
+  options.forEach(opt => {
+    const coverage = `${opt.available}/${opt.totalItems} available`;
+    out += `${opt.supplier.name.padEnd(14)} $${opt.supplierTotal.toFixed(2)}  ${coverage}`;
+    if (opt === bestOneStore) out += '  <- BEST ONE STORE';
+    if (opt.missing.length) out += `  (missing: ${opt.missing.map(x => x.name).join(', ')})`;
+    out += '\n';
+  });
+
+  if (bestOneStore) {
+    out += `\nRecommended one store: ${bestOneStore.supplier.name} - $${bestOneStore.supplierTotal.toFixed(2)}\n`;
+  } else {
+    out += `\nNo single store has every item. Closest: ${closest.supplier.name} (${closest.available}/${closest.totalItems}).\n`;
+  }
+
+  const mixedLines = orders.map(order => ({ order, price:getBestOrderPrice(order) }));
+  const foundMixed = mixedLines.filter(x => x.price);
+  const mixedTotal = foundMixed.reduce((sum, x) => sum + x.price.sub, 0);
+  out += `\nBEST SUPPLIER (MIXED STORES)\n$${mixedTotal.toFixed(2)}  ${foundMixed.length}/${orders.length} available\n`;
+  foundMixed.forEach(x => {
+    const rowUnit = x.order.unit || (x.order.isWire ? 'm' : 'each');
+    out += `${x.order.qty}${x.order.isWire ? ' '+rowUnit : ''} - ${x.order.name} -> ${x.price.supplierName} = $${x.price.sub.toFixed(2)}\n`;
+  });
+
+  if (bestOneStore) {
+    out += `\nBUY FROM ${bestOneStore.supplier.name.toUpperCase()}\n`;
+    bestOneStore.lines.forEach(x => {
+      out += `${x.order.qty}${x.order.isWire ? ' '+x.unit : ''} - ${x.order.name} @ $${x.price.price.toFixed(2)} = $${x.price.sub.toFixed(2)}\n`;
+    });
+  }
+  return out;
+}
+
+function genBuyOptions(mode) {
+  if (!orders.length) { toast('вљ  No items in list',true); return; }
+  const text = buildBuyOptionsText();
+  const id = mode==='mob'?'mob-outPre':'outPre';
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+  if (mode==='desk') document.getElementById('outSec').style.display='block';
+  else document.getElementById('mob-out').style.display='block';
+}
+
+function genList(mode) {
+  if (!orders.length) { toast('⚠ No items in list',true); return; }
+  buildOutput(mode);
+  if (mode==='desk') document.getElementById('outSec').style.display='block';
+  else document.getElementById('mob-out').style.display='block';
+}
+
+function copyOut(mode) {
+  const id=mode==='mob'?'mob-outPre':'outPre';
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>toast('✓ Copied to clipboard'));
+}
+
+// ══ QUICK CALC ══
+function qCalc(mode) {
+  const a=parseFloat(document.getElementById(mode==='mob'?'mq1':'q1').value);
+  const b=parseFloat(document.getElementById(mode==='mob'?'mq2':'q2').value);
+  if (!isNaN(a)&&!isNaN(b)&&b!==0) {
+    const r=(a/b).toFixed(2);
+    document.getElementById(mode==='mob'?'mq3':'q3').value=r;
+    if (mode==='desk') document.getElementById('qrv').textContent='$'+r;
+  }
+}
+
+// ══ TOAST ══
+function toast(msg,isErr=false) {
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.className='toast'+(isErr?' err':'');
+  t.style.display='flex';
+  clearTimeout(window._tt);
+  window._tt=setTimeout(()=>t.style.display='none',2500);
+}
+
+// Enter shortcuts
+document.getElementById('srch').addEventListener('keydown',e=>{if(e.key==='Enter')addItem('desk');});
+document.getElementById('qty').addEventListener('keydown',e=>{if(e.key==='Enter')addItem('desk');});
+document.getElementById('mob-srch').addEventListener('keydown',e=>{if(e.key==='Enter')addItem('mob');});
+document.getElementById('mob-qty').addEventListener('keydown',e=>{if(e.key==='Enter')addItem('mob');});
+document.getElementById('mob-dbSearch').addEventListener('input',filterDB);
+
+qCalc('desk'); qCalc('mob');
+</script>
+
+<script>
+if ('serviceWorker' in navigator && !['localhost','127.0.0.1'].includes(location.hostname)) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        setInterval(() => reg.update(), 60000);
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state==='installed' && navigator.serviceWorker.controller) {
+              newSW.postMessage('skipWaiting');
+              window.location.reload();
+            }
+          });
+        });
+      })
+      .catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

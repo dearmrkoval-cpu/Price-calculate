@@ -1,0 +1,9 @@
+{
+  "appId": "com.matcalc.app",
+  "appName": "MatCalc",
+  "webDir": "www",
+  "server": {
+    "url": "https://dearmrkoval-cpu.github.io/Price-calculate/",
+    "cleartext": false
+  }
+}
